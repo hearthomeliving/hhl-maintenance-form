@@ -380,7 +380,7 @@ textarea {
 </head>
 <body>
 
-<div class="proto-banner"><strong>Prototype.</strong> Submissions post to the test pipeline. v0.3, built 2026-05-29.</div>
+<div class="proto-banner"><strong>Prototype.</strong> Submissions post to the test pipeline. v0.4, built 2026-05-29.</div>
 
 <div class="shell">
   <header class="app-header">
@@ -776,8 +776,11 @@ const SETTINGS_KEY = 'hahl-maintenance-settings-v1';
 const DEFAULT_SETTINGS = {
   notify_mark_to: 'adrian@hearthomeliving.co.uk',
   notify_submitter_to_override: '',
-  webhook_url: 'https://ruthbloch.app.n8n.cloud/webhook/maintenance-test-adrian'
+  webhook_url: 'https://ruthbloch.app.n8n.cloud/webhook/maintenance-test-adrian',
+  debug_mode: false
 };
+
+const MIN_PHOTO_BYTES = 10240; // 10 KB. Real phone photos are far larger; this blocks the PWA icon and other junk.
 
 function loadSettings() {
   try {
@@ -985,7 +988,12 @@ function renderStep1() {
   screen.appendChild(field('Best way to reach you', selectField('contactMethod', state.contactMethod, ['WhatsApp', 'Phone call', 'Email']), null, true));
   screen.appendChild(field('Contact number or email', textField('contactValue', state.contactValue, 'e.g. 07700 900123 or sarah@hearthomeliving.co.uk'), null, true));
 
-  screen.appendChild(navButtons({ onNext: () => { state.step = 2; render(); } }));
+  screen.appendChild(navButtons({ onNext: () => {
+    if (!state.name.trim()) { alert('Your name is required.'); return; }
+    if (!state.contactValue.trim()) { alert('Contact number or email is required.'); return; }
+    if (state.contactMethod === 'Email' && !state.contactValue.includes('@')) { alert('That does not look like an email address.'); return; }
+    state.step = 2; render();
+  } }));
 }
 
 function renderStep2() {
@@ -1139,7 +1147,8 @@ function renderStep6() {
 
   const now = new Date();
   const isoLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-  screen.appendChild(field('When did you first notice?', el('input', { type: 'datetime-local', id: 'f-noticedAt', value: state.noticedAt || isoLocal,
+  if (!state.noticedAt) state.noticedAt = isoLocal; // capture the default so it persists into the payload even if untouched
+  screen.appendChild(field('When did you first notice?', el('input', { type: 'datetime-local', id: 'f-noticedAt', value: state.noticedAt,
     max: isoLocal, oninput: (e) => state.noticedAt = e.target.value }), null, true));
 
   const uploader = el('label', { class: 'photo-uploader' }, [
@@ -1157,7 +1166,9 @@ function renderStep6() {
 
   screen.appendChild(navButtons({ onNext: () => {
     if (!state.description.trim()) { alert('Description is mandatory.'); return; }
+    if (state.description.trim().length < 10) { alert('Please describe what is wrong in a bit more detail (at least 10 characters).'); return; }
     if (!state.room) { alert('Choose a room.'); return; }
+    if (!state.noticedAt) { alert('Set when you first noticed the issue.'); return; }
     if (state.photos.length === 0) { alert('At least one photo is mandatory per the manual.'); return; }
     state.step = 7; render();
   } }));
@@ -1165,15 +1176,21 @@ function renderStep6() {
 
 function handlePhotos(ev) {
   const files = Array.from(ev.target.files || []);
+  const rejected = [];
   files.slice(0, 5 - state.photos.length).forEach(f => {
+    if (!f.type || f.type.indexOf('image/') !== 0) { rejected.push(f.name + ' (not an image)'); return; }
+    if (f.size < MIN_PHOTO_BYTES) { rejected.push(f.name + ' (too small, looks like an icon or thumbnail)'); return; }
     const reader = new FileReader();
     reader.onload = (e) => {
-      state.photos.push({ name: f.name, size: f.size, dataUrl: e.target.result });
+      state.photos.push({ name: f.name, size: f.size, type: f.type, dataUrl: e.target.result });
       refreshPhotoList(document.getElementById('photo-list'));
     };
     reader.readAsDataURL(f);
   });
   ev.target.value = '';
+  if (rejected.length) {
+    alert('These files were not added:\n\n' + rejected.join('\n') + '\n\nPhotos need to be real images and at least ' + Math.round(MIN_PHOTO_BYTES / 1024) + ' KB.');
+  }
 }
 
 function refreshPhotoList(container) {
@@ -1345,6 +1362,18 @@ function renderSettings() {
     placeholder: DEFAULT_SETTINGS.webhook_url
   }), 'Where the form POSTs on submit. Leave as default unless you have a different test or production endpoint.', false));
 
+  const debugWrap = el('div', { class: 'field' }, [
+    el('label', { class: 'field-label' }, 'Debug mode'),
+    el('div', { class: 'check-item' + (settings.debug_mode ? ' checked' : '') }, [
+      el('input', { type: 'checkbox', id: 's-debug', checked: settings.debug_mode ? 'checked' : null, onchange: (e) => {
+        e.target.parentElement.classList.toggle('checked', e.target.checked);
+      }}),
+      el('label', { for: 's-debug' }, 'Show raw JSON payload on the Sent screen')
+    ]),
+    el('div', { class: 'field-help' }, 'For sandbox testing only. Leave off for real users.')
+  ]);
+  modal.appendChild(debugWrap);
+
   const actions = el('div', { class: 'actions' });
   actions.appendChild(el('button', { class: 'btn-secondary', onclick: closeSettings }, 'Cancel'));
   actions.appendChild(el('button', {
@@ -1353,7 +1382,8 @@ function renderSettings() {
       const newSettings = {
         notify_mark_to: document.getElementById('s-notify-mark').value.trim(),
         notify_submitter_to_override: document.getElementById('s-notify-submitter').value.trim(),
-        webhook_url: document.getElementById('s-webhook').value.trim() || DEFAULT_SETTINGS.webhook_url
+        webhook_url: document.getElementById('s-webhook').value.trim() || DEFAULT_SETTINGS.webhook_url,
+        debug_mode: document.getElementById('s-debug').checked
       };
       saveSettings(newSettings);
       closeSettings();
@@ -1397,9 +1427,11 @@ function renderStep9() {
     '. Reply to your WhatsApp with the reference number anytime to check status.';
   screen.appendChild(next);
 
-  screen.appendChild(el('p', { class: 'step-eyebrow', style: 'margin-top: 16px;' }, 'Payload sent (or to be sent)'));
-  const payload = JSON.stringify(buildPayload(), null, 2);
-  screen.appendChild(el('div', { class: 'payload-preview' }, payload));
+  if (settings.debug_mode) {
+    screen.appendChild(el('p', { class: 'step-eyebrow', style: 'margin-top: 16px;' }, 'Payload sent (debug mode)'));
+    const payload = JSON.stringify(buildPayload(), null, 2);
+    screen.appendChild(el('div', { class: 'payload-preview' }, payload));
+  }
 
   screen.appendChild(navButtons({ back: false, onNext: function () { resetState(); state.step = 0; render(); }, nextLabel: 'Log another issue', primaryClass: 'btn-secondary' }));
 }
