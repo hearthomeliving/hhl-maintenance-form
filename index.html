@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>HAHL maintenance request</title>
+<meta name="theme-color" content="#0c4145">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HAHL Maintenance">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: #f3f4f6;
+  color: #1f2937;
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.proto-banner {
+  background: #fef3c7;
+  color: #78350f;
+  padding: 10px 16px;
+  font-size: 13px;
+  text-align: center;
+  border-bottom: 1px solid #fde68a;
+}
+.proto-banner strong { font-weight: 600; }
+.shell {
+  max-width: 480px;
+  margin: 16px auto;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+header.app-header {
+  background: #0c4145;
+  color: #ffffff;
+  padding: 14px 20px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+header.app-header h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+header.app-header .subtitle {
+  font-size: 12px;
+  opacity: 0.7;
+  font-weight: 400;
+}
+.progress {
+  display: flex;
+  gap: 4px;
+  padding: 12px 20px 0;
+}
+.progress span {
+  flex: 1;
+  height: 3px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  transition: background-color 0.2s;
+}
+.progress span.done { background: #469B82; }
+.progress span.active { background: #0c4145; }
+main.screen {
+  padding: 16px 20px 24px;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+.step-eyebrow {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.step-title {
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 8px;
+  color: #0c4145;
+  line-height: 1.3;
+}
+.step-hint {
+  font-size: 14px;
+  color: #4b5563;
+  margin: 0 0 16px;
+}
+.field {
+  margin-bottom: 14px;
+}
+.field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+}
+.field-label .req {
+  color: #dc2626;
+  margin-left: 2px;
+}
+.field-help {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+input[type=text], input[type=tel], input[type=email], input[type=datetime-local], select, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-family: inherit;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2937;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #0c4145;
+  box-shadow: 0 0 0 3px rgba(12, 65, 69, 0.12);
+}
+textarea {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.5;
+}
+.check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.check-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+  align-items: flex-start;
+}
+.check-item:hover { background: #f9fafb; }
+.check-item input { margin-top: 3px; flex-shrink: 0; }
+.check-item.checked { background: #ecfdf5; border-color: #6ee7b7; }
+.check-item.danger { background: #fef2f2; border-color: #fecaca; }
+.check-item.danger.checked { background: #fee2e2; border-color: #fca5a5; }
+.check-item label { font-size: 14px; flex: 1; line-height: 1.5; cursor: pointer; }
+.skip-reason {
+  margin-top: 6px;
+  display: none;
+}
+.check-item.skipped .skip-reason { display: block; }
+.skip-reason input {
+  font-size: 13px;
+  padding: 6px 8px;
+}
+.skip-link {
+  font-size: 12px;
+  color: #6b7280;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-left: auto;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.severity-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.sev-pill {
+  flex: 1;
+  min-width: 80px;
+  padding: 12px 8px;
+  text-align: center;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  transition: all 0.15s;
+}
+.sev-pill:hover { border-color: #9ca3af; }
+.sev-pill.selected { border-color: #0c4145; background: #0c4145; color: #ffffff; }
+.sev-pill .sub { display: block; font-size: 11px; font-weight: 400; margin-top: 2px; opacity: 0.85; }
+.photo-uploader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 2px dashed #d1d5db;
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  font-size: 14px;
+  color: #4b5563;
+}
+.photo-uploader:hover { border-color: #0c4145; }
+.photo-uploader input { display: none; }
+.photo-uploader .icon {
+  font-size: 24px;
+  line-height: 1;
+}
+.photo-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+.photo-tile {
+  aspect-ratio: 1;
+  background: #e5e7eb;
+  border-radius: 6px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+.photo-tile .remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.warn-banner {
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  color: #78350f;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.danger-banner {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #7f1d1d;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.info-banner {
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+  color: #1e3a8a;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.summary-card {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 14px;
+}
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  gap: 10px;
+}
+.summary-row .label { color: #6b7280; flex-shrink: 0; }
+.summary-row .value { text-align: right; word-break: break-word; }
+.summary-row.block { flex-direction: column; }
+.summary-row.block .value { text-align: left; margin-top: 4px; }
+.payload-preview {
+  background: #1f2937;
+  color: #e5e7eb;
+  padding: 12px;
+  border-radius: 8px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+  margin-top: 12px;
+}
+.nav {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+.nav button {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+}
+.btn-primary { background: #0c4145; color: #ffffff; }
+.btn-primary:hover { background: #073134; }
+.btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
+.btn-secondary { background: #ffffff; color: #374151; border-color: #d1d5db; }
+.btn-secondary:hover { background: #f9fafb; }
+.btn-danger { background: #dc2626; color: #ffffff; }
+.success-icon {
+  width: 56px;
+  height: 56px;
+  background: #d1fae5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 8px auto;
+  font-size: 28px;
+  color: #047857;
+}
+.ref-num {
+  text-align: center;
+  font-family: ui-monospace, monospace;
+  font-size: 18px;
+  font-weight: 500;
+  padding: 10px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  letter-spacing: 0.05em;
+}
+.next-steps { font-size: 13px; line-height: 1.65; color: #4b5563; }
+.next-steps strong { color: #1f2937; font-weight: 500; }
+.section-ref {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 12px;
+  text-align: right;
+}
+.foot-note {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+  line-height: 1.5;
+}
+.settings-footer { text-align: center; margin: 12px auto 24px; font-size: 12px; color: #6b7280; }
+.settings-footer button { background: none; border: none; color: #0c4145; text-decoration: underline; cursor: pointer; font-size: 12px; padding: 4px 8px; font-family: inherit; }
+.settings-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.settings-modal { background: #ffffff; border-radius: 12px; max-width: 480px; width: 100%; padding: 20px 22px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); max-height: 90vh; overflow-y: auto; }
+.settings-modal h2 { margin: 0 0 4px; font-size: 18px; color: #0c4145; font-weight: 500; }
+.settings-modal p.lede { margin: 0 0 16px; font-size: 13px; color: #4b5563; line-height: 1.5; }
+.settings-modal .actions { display: flex; gap: 8px; margin-top: 16px; }
+.settings-modal .actions button { flex: 1; }
+@media (max-width: 520px) {
+  .shell { margin: 0; border-radius: 0; box-shadow: none; }
+  body { background: #ffffff; }
+}
+</style>
+</head>
+<body>
+
+<div class="proto-banner"><strong>Prototype.</strong> Submissions post to the test pipeline. v0.3, built 2026-05-29.</div>
+
+<div class="shell">
+  <header class="app-header">
+    <div>
+      <h1>Maintenance request</h1>
+      <div class="subtitle">Heart &amp; Home Living</div>
+    </div>
+    <div class="subtitle" id="step-counter">1 of 9</div>
+  </header>
+  <div class="progress" id="progress"></div>
+  <main class="screen" id="screen"></main>
+</div>
+
+<div class="settings-footer">
+  <button type="button" onclick="renderSettings()">Settings</button>
+</div>
+
+<div id="settings-overlay" class="settings-overlay" style="display: none;"></div>
+
+<script>
+const HOMES = ['Aurora', 'Lyra', 'Orion', 'Cygnus', 'Leo', 'Lynx', 'Phoenix House', 'Pegasus House', 'Vela House'];
+const ROLES = ['House Manager', 'Deputy Manager', 'Senior Support Worker', 'Support Worker', 'RI'];
+const ROOMS = ['Kitchen', 'Living room', 'Dining room', 'Hallway', 'Stairs / landing', 'Bathroom (main)', 'Bathroom (ensuite)', 'Bedroom 1', 'Bedroom 2', 'Bedroom 3', 'Bedroom 4', 'Office / staff room', 'Garden', 'External / driveway', 'Garage / shed', 'Whole house', 'Other'];
+
+const EMERGENCY_999 = [
+  'Fire or smoke in the building',
+  'Smell of gas that will not clear',
+  'Structural collapse (ceiling, wall, floor)',
+  'Flooding creating serious electrical danger',
+  'Someone seriously hurt or trapped'
+];
+
+const ONCALL = [
+  'Property cannot be made secure (broken door or accessible window)',
+  'Smashed window in a communal area where broken glass risks a child',
+  'Major water leak that cannot be stopped',
+  'Entire fire alarm system is down with no detection',
+  'A child relies on a medical device requiring electricity and the power is out'
+];
+
+const PRE_CHECKS = [
+  'It is plugged in and the socket is switched on',
+  'You have checked the fuse board for tripped switches',
+  'You have identified whether the issue is in one room or the whole house',
+  'You have checked whether anyone changed the controls, thermostat, or timer',
+  'You have looked for an obvious blockage (hair, food, object)',
+  'You have tried any simple reset button on the appliance or boiler'
+];
+
+const SOP = {
+  'Heating, boiler or hot water': {
+    gates: [
+      'Thermostat set above current room temperature',
+      'Timer or programmer set correctly (clocks recently changed?)',
+      'Boiler display checked for error code (note the code if shown)',
+      'Boiler pressure gauge reads between 1.0 and 1.5 bar',
+      'Boiler reset button pressed once, waited two minutes',
+      'Confirmed other rooms have heating'
+    ],
+    urgent: [
+      'A medically vulnerable child is in the home and temperature is dangerously low',
+      'Boiler making unusual noises, leaking water, or smell of gas',
+      'No way to keep children warm tonight'
+    ],
+    ref: 'Manual sections 6.1, 6.2, 6.3'
+  },
+  'Radiator cold': {
+    gates: [
+      'Radiator valve fully open (turn anti-clockwise)',
+      'Other radiators in the house are working',
+      'Top of radiator cold and bottom warm (would need bleeding)'
+    ],
+    urgent: [],
+    ref: 'Manual section 6.4'
+  },
+  'Power cut': {
+    gates: [
+      'Checked whether street lights or neighbours are also affected',
+      'Fuse board main switch position checked',
+      'Main switch reset once (not repeatedly)',
+      'Checked powercuts.nationalgrid.co.uk or called 105'
+    ],
+    urgent: [
+      'A child relies on a medical device that requires electricity',
+      'Burning smell from the fuse board or any socket'
+    ],
+    ref: 'Manual section 6.5'
+  },
+  'Lights not working': {
+    gates: [
+      'Light switch confirmed on',
+      'Bulb replaced (if safe to reach)',
+      'Fuse board checked for tripped lighting circuit',
+      'Checked whether other rooms are affected or just this one'
+    ],
+    urgent: [
+      'A light fitting is sparking, smoking, or smells of burning'
+    ],
+    ref: 'Manual section 6.6'
+  },
+  'Sockets not working': {
+    gates: [
+      'Tried the appliance in a different socket',
+      'Tried a different appliance in the same socket',
+      'Fuse board checked for tripped circuit',
+      'Socket switch confirmed turned on'
+    ],
+    urgent: [
+      'Socket scorched, discoloured, hot to touch, or smells of burning'
+    ],
+    ref: 'Manual section 6.7'
+  },
+  'Fuse board tripped': {
+    gates: [
+      'Identified which switch tripped',
+      'Reset the switch once',
+      'Unplugged appliances on that circuit if it tripped again'
+    ],
+    urgent: [
+      'Main switch keeps tripping, whole house without power',
+      'Burning smell or scorch marks on the fuse board'
+    ],
+    ref: 'Manual section 6.8'
+  },
+  'Oven (kitchen)': {
+    gates: [
+      'Oven plugged in, socket switched on',
+      'Clock or timer set correctly (many ovens need this)',
+      'Fuse board checked for tripped circuit',
+      'Oven door fully closed'
+    ],
+    urgent: [],
+    ref: 'Manual section 6.9'
+  },
+  'Hob (kitchen)': {
+    gates: [
+      'Hob plugged in, socket switched on (if electric)',
+      'Fuse board checked',
+      'Other gas appliances confirmed working (if gas)',
+      'Tried the oven to test power supply'
+    ],
+    urgent: [
+      'Smell of gas — do not switch anything on, evacuate, call 999 and 0800 111 999'
+    ],
+    ref: 'Manual section 6.10'
+  },
+  'Fridge or freezer': {
+    gates: [
+      'Plugged in, socket switched on',
+      'Temperature dial set correctly',
+      'Doors not being left open',
+      'Back of fridge checked for ice or blockages',
+      'Tested socket with another appliance'
+    ],
+    urgent: [],
+    ref: 'Manual section 6.11'
+  },
+  'Dishwasher': {
+    gates: [
+      'Plugged in, socket switched on',
+      'Door fully closed and latched',
+      'Fuse board checked',
+      'Drain filter cleaned',
+      'Short cycle run with no dishes (tests drain)'
+    ],
+    urgent: [],
+    ref: 'Manual section 6.12'
+  },
+  'Washing machine': {
+    gates: [
+      'Plugged in, socket switched on',
+      'Door fully closed and locked',
+      'Fuse board checked',
+      'Filter and drain checked for blockages',
+      'Hot water tap behind machine confirmed on'
+    ],
+    urgent: [],
+    ref: 'Manual section 6.13'
+  },
+  'Tumble dryer': {
+    gates: [
+      'Plugged in, socket switched on',
+      'Door fully closed',
+      'Fuse board checked',
+      'Lint filter cleaned thoroughly'
+    ],
+    urgent: [],
+    ref: 'Manual section 6.14'
+  },
+  'Blocked sink': {
+    gates: [
+      'Plug or strainer removed and checked',
+      'Visible debris removed if safe',
+      'Under-sink checked for leaks',
+      'Plunger or boiling water attempted'
+    ],
+    urgent: [],
+    ref: 'Manual section 6.15'
+  },
+  'Blocked toilet': {
+    gates: [
+      'Cistern water level checked',
+      'Obvious blockage removed if safe',
+      'Plunger used (several firm plunges)',
+      'Other toilets in the home checked'
+    ],
+    urgent: [
+      'All toilets in the home including the staff toilet are blocked'
+    ],
+    ref: 'Manual sections 6.16, 6.20'
+  },
+  'Leaking tap': {
+    gates: [
+      'Tap fully closed',
+      'Leak source identified (tap or under-sink)',
+      'Bucket placed under leak',
+      'Isolation valve checked under sink'
+    ],
+    urgent: [],
+    ref: 'Manual section 6.17'
+  },
+  'Major leak': {
+    gates: [
+      'Main water stop tap turned off',
+      'Children moved away from the leak',
+      'Electrics turned off if water near sockets',
+      'Water collection started (mops, buckets)'
+    ],
+    urgent: [
+      'Major uncontrollable water leak',
+      'Water near electrics or fuse board',
+      'Water coming from ceiling or inside walls'
+    ],
+    ref: 'Manual section 6.18'
+  },
+  'Shower not working': {
+    gates: [
+      'Hot water works in taps',
+      'Shower valve or mixer valve checked',
+      'Shower head checked for limescale or blockage'
+    ],
+    urgent: [],
+    ref: 'Manual section 6.19'
+  },
+  'Internal door': {
+    gates: [
+      'Door opens and closes safely',
+      'No visible damage to hinges or handles',
+      'Handle screw tightened if visible'
+    ],
+    urgent: [
+      'A child is locked in a room and you cannot open the door'
+    ],
+    ref: 'Manual section 6.23'
+  },
+  'Front door or lock': {
+    gates: [
+      'Tried a different key',
+      'Lock checked for damage or jam',
+      'Back bolt or chain attempted as backup',
+      'Confirmed bolt is engaging'
+    ],
+    urgent: [
+      'Front door cannot be locked and the property is insecure'
+    ],
+    ref: 'Manual section 6.24'
+  },
+  'Window broken or damaged': {
+    gates: [
+      'Children moved away from broken glass',
+      'Glass not touched with bare hands',
+      'Room locked off if possible',
+      'Property security assessed'
+    ],
+    urgent: [
+      'Smashed window in a communal area (living room, kitchen, hallway)',
+      'Smashed window in occupied bedroom with no alternative room',
+      'Ground floor or accessible window smashed and property insecure'
+    ],
+    ref: 'Manual section 6.22'
+  },
+  'Fire safety (alarm or fire door)': {
+    gates: [
+      'Confirmed no actual fire or smoke',
+      'Battery checked (low battery beeps every minute)',
+      'Battery replaced if safe to reach',
+      'Fire door checked for full close'
+    ],
+    urgent: [
+      'Entire fire alarm system down with no detection'
+    ],
+    ref: 'Manual section 6.25'
+  },
+  'Fence or gate damage': {
+    gates: [
+      'Property security assessed',
+      'Risk to children checked (splinters, sharp edges)',
+      'Escape or intruder access risk assessed'
+    ],
+    urgent: [
+      'Damage so severe that children could escape or intruders enter'
+    ],
+    ref: 'Manual section 6.30'
+  },
+  'Lost keys or lock': {
+    gates: [
+      'Searched obvious places',
+      'Asked all staff for spare key',
+      'Checked whether room can be unlocked from outside'
+    ],
+    urgent: [
+      'A child is locked in a room and you cannot open the door'
+    ],
+    ref: 'Manual section 6.31'
+  },
+  'Broken bed or furniture': {
+    gates: [
+      'Bed safety assessed',
+      'Sharp edges or collapse risk checked',
+      'Alternative sleeping arrangement available'
+    ],
+    urgent: [
+      'Bed unsafe (collapse or injury risk) and no alternative sleeping provision'
+    ],
+    ref: 'Manual section 6.21'
+  },
+  'Damp or mould': {
+    gates: [
+      'Recently painted area ruled out',
+      'Leak from above checked',
+      'Condensation from bathroom or cooking considered',
+      'Window and door seals checked'
+    ],
+    urgent: [
+      'Significant mould growth or water leaking from above'
+    ],
+    ref: 'Manual section 6.28'
+  },
+  'Pests (insects, rodents, wasps)': {
+    gates: [
+      'Pest identified if safe',
+      'Entry point checked',
+      'Food sources and waste checked'
+    ],
+    urgent: [
+      "Wasps' nest inside the house or in a child's bedroom",
+      'Significant rat infestation with droppings in food prep areas'
+    ],
+    ref: 'Manual section 6.29'
+  },
+  'Internet or Wi-Fi': {
+    gates: [
+      'Router plugged in and switched on',
+      'Cables connected',
+      'Other devices can connect',
+      'Router restarted (off for 30 seconds, then on)'
+    ],
+    urgent: [],
+    ref: 'Manual section 6.26 — if unresolved, BitTech IT (support@bittechit.co.uk).'
+  },
+  'Garden or external': {
+    gates: [
+      'Issue identified',
+      'Risk to children assessed',
+      'Property security checked'
+    ],
+    urgent: [],
+    ref: 'Manual section 6.30 (related)'
+  },
+  'Thermostat confusion': {
+    gates: [
+      'Current temperature setting checked',
+      'Confirmed it has not been accidentally changed',
+      'Mode checked (heat, cool, auto)'
+    ],
+    urgent: [],
+    ref: 'Manual section 6.27'
+  },
+  'Other (not listed above)': {
+    gates: [
+      'Universal pre-report checks completed',
+      'Issue is not an emergency or immediate safeguarding risk'
+    ],
+    urgent: [],
+    ref: 'Use this when no category fits. Describe fully below.'
+  }
+};
+
+const STEP_LABELS = ['Safety check', 'About you', 'Quick checks', 'What’s wrong', 'SOP steps', 'Severity flags', 'Detail', 'Severity', 'Review', 'Sent'];
+const TOTAL_STEPS = 9;
+
+const SETTINGS_KEY = 'hahl-maintenance-settings-v1';
+const DEFAULT_SETTINGS = {
+  notify_mark_to: 'adrian@hearthomeliving.co.uk',
+  notify_submitter_to_override: '',
+  webhook_url: 'https://ruthbloch.app.n8n.cloud/webhook/maintenance-test-adrian'
+};
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return Object.assign({}, DEFAULT_SETTINGS);
+    const parsed = JSON.parse(raw);
+    return Object.assign({}, DEFAULT_SETTINGS, parsed);
+  } catch (e) {
+    return Object.assign({}, DEFAULT_SETTINGS);
+  }
+}
+
+function saveSettings(next) {
+  settings = Object.assign({}, settings, next);
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
+}
+
+let settings = loadSettings();
+
+const state = {
+  step: 0,
+  emergencyTicked: [],
+  name: '',
+  role: ROLES[0],
+  home: HOMES[0],
+  contactMethod: 'WhatsApp',
+  contactValue: '',
+  preChecks: {},
+  category: '',
+  gateStatus: {},
+  gateSkipReasons: {},
+  urgentTicked: [],
+  description: '',
+  room: '',
+  noticedAt: '',
+  photos: [],
+  childrenInArea: 'No',
+  severity: 'Routine',
+  severityAutoBumped: false,
+  refNumber: ''
+};
+
+function el(tag, attrs, children) {
+  const e = document.createElement(tag);
+  if (attrs) {
+    Object.keys(attrs).forEach(k => {
+      const v = attrs[k];
+      if (v == null) return;
+      if (k === 'class') e.className = v;
+      else if (k === 'html') e.innerHTML = v;
+      else if (k.startsWith('on')) e.addEventListener(k.slice(2).toLowerCase(), v);
+      else e.setAttribute(k, v);
+    });
+  }
+  if (children) {
+    (Array.isArray(children) ? children : [children]).forEach(c => {
+      if (c == null) return;
+      if (typeof c === 'string') e.appendChild(document.createTextNode(c));
+      else e.appendChild(c);
+    });
+  }
+  return e;
+}
+
+function renderProgress() {
+  const p = document.getElementById('progress');
+  p.innerHTML = '';
+  for (let i = 0; i < TOTAL_STEPS; i++) {
+    const s = document.createElement('span');
+    if (i < state.step) s.classList.add('done');
+    if (i === state.step) s.classList.add('active');
+    p.appendChild(s);
+  }
+  document.getElementById('step-counter').textContent = (state.step + 1) + ' of ' + TOTAL_STEPS;
+}
+
+function setSev(v, auto) {
+  state.severity = v;
+  state.severityAutoBumped = !!auto;
+}
+
+function selectField(name, value, options, opts) {
+  opts = opts || {};
+  const sel = el('select', { id: 'f-' + name, onchange: (e) => { state[name] = e.target.value; if (opts.onchange) opts.onchange(e.target.value); } });
+  options.forEach(o => {
+    const op = document.createElement('option');
+    if (typeof o === 'string') { op.value = o; op.textContent = o; }
+    else { op.value = o.value; op.textContent = o.label; }
+    if ((typeof o === 'string' ? o : o.value) === value) op.selected = true;
+    sel.appendChild(op);
+  });
+  return sel;
+}
+
+function textField(name, value, placeholder) {
+  return el('input', {
+    type: 'text', id: 'f-' + name, value: value || '', placeholder: placeholder || '',
+    oninput: (e) => state[name] = e.target.value
+  });
+}
+
+function field(labelText, inputEl, helpText, required) {
+  return el('div', { class: 'field' }, [
+    el('label', { class: 'field-label' }, [labelText, required ? el('span', { class: 'req' }, '*') : null]),
+    inputEl,
+    helpText ? el('div', { class: 'field-help' }, helpText) : null
+  ]);
+}
+
+function navButtons(opts) {
+  opts = opts || {};
+  const wrap = el('div', { class: 'nav' });
+  if (opts.back !== false) wrap.appendChild(el('button', { class: 'btn-secondary', onclick: back }, opts.backLabel || 'Back'));
+  wrap.appendChild(el('button', {
+    class: opts.primaryClass || 'btn-primary',
+    onclick: opts.onNext,
+    disabled: opts.disabled ? 'disabled' : null
+  }, opts.nextLabel || 'Continue'));
+  return wrap;
+}
+
+function renderStep0() {
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  screen.appendChild(el('p', { class: 'step-eyebrow' }, 'Safety first'));
+  screen.appendChild(el('h2', { class: 'step-title' }, 'Is any of this happening right now?'));
+  screen.appendChild(el('p', { class: 'step-hint' }, 'Tick anything that applies. If any of these are true, this form is not the right way to report it.'));
+
+  const list = el('div', { class: 'check-list' });
+
+  const heading = el('div', { class: 'field-label', style: 'margin: 4px 0 6px; color: #7f1d1d;' }, 'Immediate danger to life');
+  list.appendChild(heading);
+  EMERGENCY_999.forEach((c, i) => list.appendChild(makeEmergencyItem('e999_' + i, c, 'danger')));
+
+  const heading2 = el('div', { class: 'field-label', style: 'margin: 12px 0 6px; color: #78350f;' }, 'Immediate safeguarding risk');
+  list.appendChild(heading2);
+  ONCALL.forEach((c, i) => list.appendChild(makeEmergencyItem('oncall_' + i, c, 'danger')));
+
+  list.appendChild(el('p', { class: 'field-help', style: 'margin-top: 12px;' }, 'If nothing here applies, continue. If any apply, the next screen tells you what to do instead.'));
+  screen.appendChild(list);
+  screen.appendChild(navButtons({ back: false, onNext: () => {
+    if (state.emergencyTicked.length > 0) renderEmergencyScreen();
+    else { state.step = 1; render(); }
+  } }));
+}
+
+function makeEmergencyItem(id, label, cls) {
+  const item = el('div', { class: 'check-item ' + (cls || '') });
+  const cb = el('input', { type: 'checkbox', id: 'cb-' + id, onchange: (e) => {
+    if (e.target.checked) state.emergencyTicked.push(label);
+    else state.emergencyTicked = state.emergencyTicked.filter(x => x !== label);
+    item.classList.toggle('checked', e.target.checked);
+  }});
+  if (state.emergencyTicked.includes(label)) { cb.checked = true; item.classList.add('checked'); }
+  item.appendChild(cb);
+  item.appendChild(el('label', { for: 'cb-' + id }, label));
+  return item;
+}
+
+function renderEmergencyScreen() {
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  screen.appendChild(el('div', { class: 'danger-banner', html:
+    '<strong>This is not a maintenance ticket.</strong> Based on what you ticked, follow the right escalation path before using this form.'
+  }));
+
+  const has999 = state.emergencyTicked.some(t => EMERGENCY_999.includes(t));
+  const hasOncall = state.emergencyTicked.some(t => ONCALL.includes(t));
+
+  if (has999) {
+    screen.appendChild(el('h2', { class: 'step-title' }, 'Call 999 now'));
+    screen.appendChild(el('p', { class: 'step-hint' }, 'Immediate danger to life.'));
+    screen.appendChild(el('ul', { style: 'font-size:14px; line-height: 1.6; padding-left: 18px;' }, [
+      el('li', null, 'Evacuate if needed.'),
+      el('li', null, 'Do not use switches if you smell gas.'),
+      el('li', null, 'Gas emergency: call 0800 111 999.'),
+      el('li', null, 'Then call 999.'),
+      el('li', null, 'After the emergency is contained, log it in ClickUp.')
+    ]));
+  }
+  if (hasOncall) {
+    screen.appendChild(el('h2', { class: 'step-title' }, 'Follow the on-call procedure'));
+    screen.appendChild(el('p', { class: 'step-hint' }, 'Immediate safeguarding risk that cannot be safely managed.'));
+    screen.appendChild(el('ul', { style: 'font-size:14px; line-height: 1.6; padding-left: 18px;' }, [
+      el('li', null, 'Call the on-call manager now.'),
+      el('li', null, 'Do not wait until morning.'),
+      el('li', null, 'After the situation is contained, log it in ClickUp.')
+    ]));
+  }
+
+  screen.appendChild(el('p', { class: 'foot-note' }, 'If you ticked something by mistake, go back and untick it.'));
+  screen.appendChild(navButtons({ onNext: () => { state.step = 0; render(); }, nextLabel: 'Back to the safety screen', backLabel: 'Close', primaryClass: 'btn-secondary' }));
+}
+
+function renderStep1() {
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  screen.appendChild(el('p', { class: 'step-eyebrow' }, 'About you'));
+  screen.appendChild(el('h2', { class: 'step-title' }, 'Who and where'));
+  screen.appendChild(el('p', { class: 'step-hint' }, 'So we can route the right person to the right home.'));
+
+  screen.appendChild(field('Your name', textField('name', state.name, 'Sarah K'), null, true));
+  screen.appendChild(field('Your role', selectField('role', state.role, ROLES), null, true));
+  screen.appendChild(field('Which home?', selectField('home', state.home, HOMES), null, true));
+  screen.appendChild(field('Best way to reach you', selectField('contactMethod', state.contactMethod, ['WhatsApp', 'Phone call', 'Email']), null, true));
+  screen.appendChild(field('Contact number or email', textField('contactValue', state.contactValue, 'e.g. 07700 900123 or sarah@hearthomeliving.co.uk'), null, true));
+
+  screen.appendChild(navButtons({ onNext: () => { state.step = 2; render(); } }));
+}
+
+function renderStep2() {
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  screen.appendChild(el('p', { class: 'step-eyebrow' }, 'Before reporting'));
+  screen.appendChild(el('h2', { class: 'step-title' }, 'Quick checks first'));
+  screen.appendChild(el('p', { class: 'step-hint' }, 'Most issues have a simple explanation. Tick what you have already checked.'));
+
+  const list = el('div', { class: 'check-list' });
+  PRE_CHECKS.forEach((c, i) => {
+    const id = 'pre_' + i;
+    const item = el('div', { class: 'check-item' });
+    const cb = el('input', { type: 'checkbox', id: 'cb-' + id, onchange: (e) => {
+      state.preChecks[c] = e.target.checked;
+      item.classList.toggle('checked', e.target.checked);
+    }});
+    if (state.preChecks[c]) { cb.checked = true; item.classList.add('checked'); }
+    item.appendChild(cb);
+    item.appendChild(el('label', { for: 'cb-' + id }, c));
+    list.appendChild(item);
+  });
+  screen.appendChild(list);
+  screen.appendChild(el('p', { class: 'field-help', style: 'margin-top: 8px;' }, 'You can continue without ticking everything. Anything you tick saves time later in the report.'));
+  screen.appendChild(navButtons({ onNext: () => { state.step = 3; render(); } }));
+}
+
+function renderStep3() {
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  screen.appendChild(el('p', { class: 'step-eyebrow' }, 'What’s wrong'));
+  screen.appendChild(el('h2', { class: 'step-title' }, 'Pick the closest category'));
+  screen.appendChild(el('p', { class: 'step-hint' }, 'The next screen will show the checks for this category.'));
+
+  const opts = Object.keys(SOP).map(k => ({ value: k, label: k }));
+  opts.unshift({ value: '', label: 'Choose a category...' });
+  screen.appendChild(field('Category', selectField('category', state.category, opts, { onchange: (v) => { if (!SOP[v]) return; state.gateStatus = {}; state.gateSkipReasons = {}; state.urgentTicked = []; }}), null, true));
+
+  if (state.category && SOP[state.category]) {
+    screen.appendChild(el('div', { class: 'info-banner' }, 'Next: the safe checks from your maintenance manual for this category. Tick what you have done. Skip a check only if you cannot do it.'));
+    screen.appendChild(el('p', { class: 'section-ref' }, SOP[state.category].ref));
+  }
+
+  screen.appendChild(navButtons({ onNext: () => {
+    if (!state.category) { alert('Pick a category.'); return; }
+    state.step = 4; render();
+  } }));
+}
+
+function renderStep4() {
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  const sop = SOP[state.category];
+  screen.appendChild(el('p', { class: 'step-eyebrow' }, 'SOP checks'));
+  screen.appendChild(el('h2', { class: 'step-title' }, state.category));
+  screen.appendChild(el('p', { class: 'step-hint' }, 'Tick each check you have done. If you cannot do one, tap Skip and tell us why.'));
+
+  const list = el('div', { class: 'check-list' });
+  sop.gates.forEach((g, i) => {
+    const id = 'gate_' + i;
+    const item = el('div', { class: 'check-item' });
+    const cb = el('input', { type: 'checkbox', id: 'cb-' + id, onchange: (e) => {
+      if (e.target.checked) state.gateStatus[g] = 'done';
+      else delete state.gateStatus[g];
+      item.classList.toggle('checked', e.target.checked);
+      if (e.target.checked) { item.classList.remove('skipped'); delete state.gateSkipReasons[g]; }
+    }});
+    if (state.gateStatus[g] === 'done') { cb.checked = true; item.classList.add('checked'); }
+
+    const lab = el('label', { for: 'cb-' + id }, g);
+    const skipBtn = el('button', { class: 'skip-link', onclick: (ev) => {
+      ev.preventDefault();
+      const skipped = item.classList.toggle('skipped');
+      if (!skipped) delete state.gateSkipReasons[g];
+      else state.gateSkipReasons[g] = state.gateSkipReasons[g] || '';
+      cb.checked = false;
+      delete state.gateStatus[g];
+      item.classList.remove('checked');
+    }}, 'Can’t do');
+    const skipReason = el('div', { class: 'skip-reason' }, [
+      el('input', { type: 'text', placeholder: 'Why not?', value: state.gateSkipReasons[g] || '', oninput: (e) => state.gateSkipReasons[g] = e.target.value })
+    ]);
+
+    item.appendChild(cb);
+    item.appendChild(lab);
+    item.appendChild(skipBtn);
+    item.appendChild(skipReason);
+    if (state.gateSkipReasons[g] !== undefined) item.classList.add('skipped');
+    list.appendChild(item);
+  });
+  screen.appendChild(list);
+  screen.appendChild(el('p', { class: 'section-ref' }, sop.ref));
+
+  screen.appendChild(navButtons({ onNext: () => {
+    const allAddressed = sop.gates.every(g => state.gateStatus[g] === 'done' || state.gateSkipReasons[g] !== undefined);
+    if (!allAddressed) { alert('Tick each check, or tap "Can’t do" and give a reason.'); return; }
+    state.step = 5; render();
+  } }));
+}
+
+function renderStep5() {
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  const sop = SOP[state.category];
+  screen.appendChild(el('p', { class: 'step-eyebrow' }, 'Severity flags'));
+  screen.appendChild(el('h2', { class: 'step-title' }, 'Anything urgent in there?'));
+  screen.appendChild(el('p', { class: 'step-hint' }, 'Tick anything that applies right now. Some of these escalate the response automatically.'));
+
+  if (sop.urgent.length === 0) {
+    screen.appendChild(el('p', { class: 'field-help' }, 'No category-specific urgent flags. Continue.'));
+  } else {
+    const list = el('div', { class: 'check-list' });
+    sop.urgent.forEach((u, i) => {
+      const id = 'urg_' + i;
+      const item = el('div', { class: 'check-item danger' });
+      const cb = el('input', { type: 'checkbox', id: 'cb-' + id, onchange: (e) => {
+        if (e.target.checked) state.urgentTicked.push(u);
+        else state.urgentTicked = state.urgentTicked.filter(x => x !== u);
+        item.classList.toggle('checked', e.target.checked);
+      }});
+      if (state.urgentTicked.includes(u)) { cb.checked = true; item.classList.add('checked'); }
+      item.appendChild(cb);
+      item.appendChild(el('label', { for: 'cb-' + id }, u));
+      list.appendChild(item);
+    });
+    screen.appendChild(list);
+  }
+
+  if (state.urgentTicked.length > 0) {
+    screen.appendChild(el('div', { class: 'warn-banner' }, 'Severity will be set to Urgent on submission. If this also matches an on-call situation, the form will redirect you back to the safety screen.'));
+  }
+
+  screen.appendChild(navButtons({ onNext: () => {
+    if (state.urgentTicked.length > 0) setSev('Urgent', true);
+    state.step = 6; render();
+  } }));
+}
+
+function renderStep6() {
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  screen.appendChild(el('p', { class: 'step-eyebrow' }, 'Detail'));
+  screen.appendChild(el('h2', { class: 'step-title' }, 'Tell us what’s wrong'));
+  screen.appendChild(el('p', { class: 'step-hint' }, 'Plain English. No child names.'));
+
+  const desc = el('textarea', { id: 'f-description', placeholder: 'e.g. boiler in cupboard not firing; pressure reads 0.5 bar; no hot water since 8am',
+    oninput: (e) => state.description = e.target.value }, state.description || '');
+  screen.appendChild(field('What’s wrong', desc, 'Describe what is broken and where. The maintenance manual says: no child names in the description.', true));
+
+  screen.appendChild(field('Which room?', selectField('room', state.room, [''].concat(ROOMS).map(r => ({ value: r, label: r || 'Choose a room...' }))), 'Mandatory per the manual.', true));
+
+  const now = new Date();
+  const isoLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  screen.appendChild(field('When did you first notice?', el('input', { type: 'datetime-local', id: 'f-noticedAt', value: state.noticedAt || isoLocal,
+    max: isoLocal, oninput: (e) => state.noticedAt = e.target.value }), null, true));
+
+  const uploader = el('label', { class: 'photo-uploader' }, [
+    el('span', { class: 'icon' }, '📷'),
+    el('span', null, 'Take or upload photos (mandatory, up to 5)'),
+    el('input', { type: 'file', accept: 'image/*', capture: 'environment', multiple: 'multiple', onchange: handlePhotos })
+  ]);
+  screen.appendChild(field('Photos', uploader, 'Photos are mandatory per the manual. Take or upload at least one.', true));
+
+  const photoList = el('div', { class: 'photo-list', id: 'photo-list' });
+  refreshPhotoList(photoList);
+  screen.appendChild(photoList);
+
+  screen.appendChild(field('Any children in the affected area?', selectField('childrenInArea', state.childrenInArea, ['No', 'Yes']), 'If Yes, severity floor becomes Priority automatically.'));
+
+  screen.appendChild(navButtons({ onNext: () => {
+    if (!state.description.trim()) { alert('Description is mandatory.'); return; }
+    if (!state.room) { alert('Choose a room.'); return; }
+    if (state.photos.length === 0) { alert('At least one photo is mandatory per the manual.'); return; }
+    state.step = 7; render();
+  } }));
+}
+
+function handlePhotos(ev) {
+  const files = Array.from(ev.target.files || []);
+  files.slice(0, 5 - state.photos.length).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      state.photos.push({ name: f.name, size: f.size, dataUrl: e.target.result });
+      refreshPhotoList(document.getElementById('photo-list'));
+    };
+    reader.readAsDataURL(f);
+  });
+  ev.target.value = '';
+}
+
+function refreshPhotoList(container) {
+  if (!container) return;
+  container.innerHTML = '';
+  state.photos.forEach((p, i) => {
+    const t = el('div', { class: 'photo-tile', style: 'background-image: url(' + p.dataUrl + ')' });
+    t.appendChild(el('button', { class: 'remove', onclick: (e) => { e.preventDefault(); state.photos.splice(i, 1); refreshPhotoList(container); } }, '×'));
+    container.appendChild(t);
+  });
+}
+
+function renderStep7() {
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  screen.appendChild(el('p', { class: 'step-eyebrow' }, 'How urgent'));
+  screen.appendChild(el('h2', { class: 'step-title' }, 'Severity'));
+
+  if (state.severityAutoBumped) {
+    screen.appendChild(el('div', { class: 'warn-banner' }, 'You ticked at least one urgent flag, so severity is set to Urgent. You can lower it if that was a mistake, but the system will trust what you ticked.'));
+  }
+  if (state.childrenInArea === 'Yes' && state.severity === 'Routine') {
+    state.severity = 'Priority';
+    screen.appendChild(el('div', { class: 'info-banner' }, 'Children are in the affected area, so the severity floor is Priority.'));
+  }
+
+  screen.appendChild(el('p', { class: 'step-hint' }, 'Pick the one that matches.'));
+
+  const pills = el('div', { class: 'severity-pills' });
+  const sevs = [
+    { v: 'Routine', sub: 'As soon as practical' },
+    { v: 'Priority', sub: 'Within 48 hours' },
+    { v: 'Urgent', sub: 'Same day, safety risk' }
+  ];
+  sevs.forEach(s => {
+    const pill = el('div', { class: 'sev-pill' + (state.severity === s.v ? ' selected' : ''), onclick: () => { state.severity = s.v; renderStep7(); }}, [
+      s.v,
+      el('span', { class: 'sub' }, s.sub)
+    ]);
+    pills.appendChild(pill);
+  });
+  screen.appendChild(pills);
+
+  screen.appendChild(el('p', { class: 'field-help', style: 'margin-top: 12px;' }, 'From the manual: Routine for most issues, Priority for significant disruption that is not a safety risk, Urgent for same-day safety or safeguarding concerns.'));
+
+  screen.appendChild(navButtons({ onNext: () => { state.step = 8; render(); } }));
+}
+
+function renderStep8() {
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  screen.appendChild(el('p', { class: 'step-eyebrow' }, 'Review'));
+  screen.appendChild(el('h2', { class: 'step-title' }, 'Check this looks right'));
+
+  const sum = el('div', { class: 'summary-card' });
+  function row(label, value) {
+    return el('div', { class: 'summary-row' }, [el('span', { class: 'label' }, label), el('span', { class: 'value' }, value || '—')]);
+  }
+  sum.appendChild(row('Home', state.home));
+  sum.appendChild(row('Submitter', state.name + ' (' + state.role + ')'));
+  sum.appendChild(row('Reachable on', state.contactMethod + ' — ' + state.contactValue));
+  sum.appendChild(row('Category', state.category));
+  sum.appendChild(row('Room', state.room));
+  sum.appendChild(row('Severity', state.severity + (state.severityAutoBumped ? ' (auto)' : '')));
+  sum.appendChild(row('Children in area', state.childrenInArea));
+  sum.appendChild(row('First noticed', state.noticedAt));
+  sum.appendChild(row('Photos', String(state.photos.length)));
+
+  const gateDone = Object.keys(state.gateStatus).filter(k => state.gateStatus[k] === 'done').length;
+  const gateSkipped = Object.keys(state.gateSkipReasons).length;
+  sum.appendChild(row('SOP checks', gateDone + ' done, ' + gateSkipped + ' skipped'));
+
+  const descRow = el('div', { class: 'summary-row block' }, [
+    el('span', { class: 'label' }, 'Description'),
+    el('span', { class: 'value' }, state.description)
+  ]);
+  sum.appendChild(descRow);
+
+  screen.appendChild(sum);
+
+  screen.appendChild(navButtons({ onNext: submit, nextLabel: 'Submit request' }));
+}
+
+function buildPayload() {
+  return {
+    reference: state.refNumber,
+    submitted_at: new Date().toISOString(),
+    notify_mark_to: settings.notify_mark_to || DEFAULT_SETTINGS.notify_mark_to,
+    notify_submitter_to: settings.notify_submitter_to_override || state.contactValue || DEFAULT_SETTINGS.notify_mark_to,
+    submitter: {
+      name: state.name,
+      role: state.role,
+      contact_method: state.contactMethod,
+      contact_value: state.contactValue
+    },
+    home: state.home,
+    room: state.room,
+    category: state.category,
+    severity: state.severity,
+    severity_auto_bumped: state.severityAutoBumped,
+    children_in_area: state.childrenInArea,
+    noticed_at: state.noticedAt,
+    description: state.description,
+    pre_checks_completed: Object.keys(state.preChecks).filter(k => state.preChecks[k]),
+    sop_gates_done: Object.keys(state.gateStatus).filter(k => state.gateStatus[k] === 'done'),
+    sop_gates_skipped: Object.keys(state.gateSkipReasons).map(k => ({ check: k, reason: state.gateSkipReasons[k] })),
+    urgent_flags_ticked: state.urgentTicked,
+    photos_count: state.photos.length,
+    photos_meta: state.photos.map(p => ({ name: p.name, size: p.size })),
+    routing_intent: routingHint()
+  };
+}
+
+function routingHint() {
+  if (state.severity === 'Urgent') return 'WhatsApp Mark immediately + auto-email contractor based on category';
+  if (state.severity === 'Priority') return 'Email Ma
