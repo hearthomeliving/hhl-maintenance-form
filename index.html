@@ -1289,4 +1289,171 @@ function buildPayload() {
 
 function routingHint() {
   if (state.severity === 'Urgent') return 'WhatsApp Mark immediately + auto-email contractor based on category';
-  if (state.severity === 'Priority') return 'Email Ma
+  if (state.severity === 'Priority') return 'Email Mark + email preferred contractor';
+  return 'Daily digest to Mark, contractor email when triaged';
+}
+
+let lastSubmitStatus = null;
+
+function submit() {
+  state.refNumber = 'MAINT-2026-' + String(Math.floor(Math.random() * 9000) + 1000);
+  const webhook = settings.webhook_url || DEFAULT_SETTINGS.webhook_url;
+  lastSubmitStatus = webhook ? 'sending' : 'no-webhook';
+  state.step = 9;
+  render();
+  if (!webhook) return;
+  const payload = buildPayload();
+  fetch(webhook, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(function (res) {
+    lastSubmitStatus = res.ok ? 'success' : ('http-' + res.status);
+    if (state.step === 9) render();
+  }).catch(function (err) {
+    lastSubmitStatus = 'error: ' + ((err && err.message) || 'fetch failed');
+    if (state.step === 9) render();
+  });
+}
+
+function renderSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  overlay.style.display = 'flex';
+  overlay.innerHTML = '';
+  const modal = el('div', { class: 'settings-modal' });
+  modal.appendChild(el('h2', null, 'Settings'));
+  modal.appendChild(el('p', { class: 'lede' }, 'Settings saved to this device only. To change globally for everyone, an admin would update the n8n config.'));
+
+  modal.appendChild(field('Send "Mark" notification email to', el('input', {
+    type: 'email',
+    id: 's-notify-mark',
+    value: settings.notify_mark_to || '',
+    placeholder: 'adrian@hearthomeliving.co.uk'
+  }), 'Where the Mark-side notification email lands. In production this is Mark\'s real address; in sandbox, your address.', false));
+
+  modal.appendChild(field('Override submitter confirmation to', el('input', {
+    type: 'email',
+    id: 's-notify-submitter',
+    value: settings.notify_submitter_to_override || '',
+    placeholder: '(leave blank to use the submitter\'s own contact)'
+  }), 'Optional. If blank, the submitter\'s own contact value from the form is used.', false));
+
+  modal.appendChild(field('Webhook URL', el('input', {
+    type: 'text',
+    id: 's-webhook',
+    value: settings.webhook_url || '',
+    placeholder: DEFAULT_SETTINGS.webhook_url
+  }), 'Where the form POSTs on submit. Leave as default unless you have a different test or production endpoint.', false));
+
+  const actions = el('div', { class: 'actions' });
+  actions.appendChild(el('button', { class: 'btn-secondary', onclick: closeSettings }, 'Cancel'));
+  actions.appendChild(el('button', {
+    class: 'btn-primary',
+    onclick: function () {
+      const newSettings = {
+        notify_mark_to: document.getElementById('s-notify-mark').value.trim(),
+        notify_submitter_to_override: document.getElementById('s-notify-submitter').value.trim(),
+        webhook_url: document.getElementById('s-webhook').value.trim() || DEFAULT_SETTINGS.webhook_url
+      };
+      saveSettings(newSettings);
+      closeSettings();
+    }
+  }, 'Save'));
+  modal.appendChild(actions);
+
+  overlay.appendChild(modal);
+  overlay.onclick = function (e) { if (e.target === overlay) closeSettings(); };
+}
+
+function closeSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  overlay.style.display = 'none';
+  overlay.innerHTML = '';
+}
+
+function renderStep9() {
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  screen.appendChild(el('div', { class: 'success-icon' }, '✓'));
+  screen.appendChild(el('h2', { class: 'step-title', style: 'text-align: center;' }, 'Submitted'));
+  screen.appendChild(el('div', { class: 'ref-num' }, state.refNumber));
+
+  if (lastSubmitStatus === 'sending') {
+    screen.appendChild(el('div', { class: 'info-banner', style: 'margin-top: 12px;' }, 'Posting to test pipeline...'));
+  } else if (lastSubmitStatus === 'success') {
+    screen.appendChild(el('div', { class: 'info-banner', style: 'margin-top: 12px;' }, 'Posted to test pipeline. Check your inbox plus the test list in ClickUp.'));
+  } else if (lastSubmitStatus === 'no-webhook') {
+    screen.appendChild(el('div', { class: 'warn-banner', style: 'margin-top: 12px;' }, 'No webhook configured. Payload below for manual POST.'));
+  } else if (lastSubmitStatus) {
+    screen.appendChild(el('div', { class: 'warn-banner', style: 'margin-top: 12px;' }, 'Post failed: ' + lastSubmitStatus + '. Workflow may be inactive, or browser blocked CORS / file:// fetch. Payload below for manual POST.'));
+  }
+
+  const next = el('div', { class: 'next-steps', style: 'margin-top: 12px;' });
+  next.innerHTML = '<strong>What happens next (in production):</strong><br>' +
+    '. You get a WhatsApp confirmation within a minute.<br>' +
+    '. Mark gets notified at his preferred channel based on severity.<br>' +
+    '. A contractor matching the category gets emailed within the hour with your photos and SOP results.<br>' +
+    '. If Severity is Urgent and Mark does not acknowledge in 5 minutes, Ruth is alerted.<br>' +
+    '. Reply to your WhatsApp with the reference number anytime to check status.';
+  screen.appendChild(next);
+
+  screen.appendChild(el('p', { class: 'step-eyebrow', style: 'margin-top: 16px;' }, 'Payload sent (or to be sent)'));
+  const payload = JSON.stringify(buildPayload(), null, 2);
+  screen.appendChild(el('div', { class: 'payload-preview' }, payload));
+
+  screen.appendChild(navButtons({ back: false, onNext: function () { resetState(); state.step = 0; render(); }, nextLabel: 'Log another issue', primaryClass: 'btn-secondary' }));
+}
+
+function resetState() {
+  lastSubmitStatus = null;
+  state.emergencyTicked = [];
+  state.preChecks = {};
+  state.category = '';
+  state.gateStatus = {};
+  state.gateSkipReasons = {};
+  state.urgentTicked = [];
+  state.description = '';
+  state.room = '';
+  state.noticedAt = '';
+  state.photos = [];
+  state.childrenInArea = 'No';
+  state.severity = 'Routine';
+  state.severityAutoBumped = false;
+  state.refNumber = '';
+}
+
+function back() {
+  state.step = Math.max(state.step - 1, 0);
+  render();
+}
+
+function render() {
+  renderProgress();
+  switch (state.step) {
+    case 0: renderStep0(); break;
+    case 1: renderStep1(); break;
+    case 2: renderStep2(); break;
+    case 3: renderStep3(); break;
+    case 4: renderStep4(); break;
+    case 5: renderStep5(); break;
+    case 6: renderStep6(); break;
+    case 7: renderStep7(); break;
+    case 8: renderStep8(); break;
+    case 9: renderStep9(); break;
+    default: renderStep0();
+  }
+}
+
+render();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('service-worker.js').catch(function () {
+      // Service worker registration failures are non-fatal. Form still works without offline support.
+    });
+  });
+}
+</script>
+
+</body>
+</html>
