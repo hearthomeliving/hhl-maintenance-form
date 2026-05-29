@@ -380,7 +380,7 @@ textarea {
 </head>
 <body>
 
-<div class="proto-banner"><strong>Prototype.</strong> Submissions post to the test pipeline. v0.4, built 2026-05-29.</div>
+<div class="proto-banner"><strong>Prototype.</strong> Submissions post to the test pipeline. v0.5, built 2026-05-29.</div>
 
 <div class="shell">
   <header class="app-header">
@@ -1151,12 +1151,16 @@ function renderStep6() {
   screen.appendChild(field('When did you first notice?', el('input', { type: 'datetime-local', id: 'f-noticedAt', value: state.noticedAt,
     max: isoLocal, oninput: (e) => state.noticedAt = e.target.value }), null, true));
 
+  screen.appendChild(el('div', { class: 'warn-banner', style: 'margin-top: 4px;' },
+    'Frame the photo on the broken thing only. No children in shot. No documents with names. No medication labels. Photos are stored in ClickUp and emailed to the maintenance team, so they leave the home.'
+  ));
+
   const uploader = el('label', { class: 'photo-uploader' }, [
     el('span', { class: 'icon' }, '📷'),
     el('span', null, 'Take or upload photos (mandatory, up to 5)'),
     el('input', { type: 'file', accept: 'image/*', capture: 'environment', multiple: 'multiple', onchange: handlePhotos })
   ]);
-  screen.appendChild(field('Photos', uploader, 'Photos are mandatory per the manual. Take or upload at least one.', true));
+  screen.appendChild(field('Photos', uploader, 'Mandatory per the manual. Photos are resized in your browser before sending so submission stays fast.', true));
 
   const photoList = el('div', { class: 'photo-list', id: 'photo-list' });
   refreshPhotoList(photoList);
@@ -1174,20 +1178,66 @@ function renderStep6() {
   } }));
 }
 
+function compressImage(file, maxEdge, quality) {
+  return new Promise(function (resolve, reject) {
+    const reader = new FileReader();
+    reader.onload = function (ev) {
+      const img = new Image();
+      img.onload = function () {
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+        const scale = Math.min(1, maxEdge / Math.max(w, h));
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        const b64 = (dataUrl.split(',')[1] || '');
+        const bytes = Math.floor(b64.length * 3 / 4);
+        resolve({ dataUrl: dataUrl, width: w, height: h, bytes: bytes });
+      };
+      img.onerror = function () { reject(new Error('Could not decode image')); };
+      img.src = ev.target.result;
+    };
+    reader.onerror = function () { reject(new Error('Could not read file')); };
+    reader.readAsDataURL(file);
+  });
+}
+
 function handlePhotos(ev) {
   const files = Array.from(ev.target.files || []);
   const rejected = [];
-  files.slice(0, 5 - state.photos.length).forEach(f => {
+  const accepted = [];
+  files.slice(0, 5 - state.photos.length).forEach(function (f) {
     if (!f.type || f.type.indexOf('image/') !== 0) { rejected.push(f.name + ' (not an image)'); return; }
     if (f.size < MIN_PHOTO_BYTES) { rejected.push(f.name + ' (too small, looks like an icon or thumbnail)'); return; }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      state.photos.push({ name: f.name, size: f.size, type: f.type, dataUrl: e.target.result });
-      refreshPhotoList(document.getElementById('photo-list'));
-    };
-    reader.readAsDataURL(f);
+    accepted.push(f);
   });
   ev.target.value = '';
+
+  accepted.forEach(function (f) {
+    compressImage(f, 1600, 0.85).then(function (out) {
+      state.photos.push({
+        name: f.name.replace(/\.[^.]+$/, '') + '.jpg',
+        original_name: f.name,
+        original_bytes: f.size,
+        bytes: out.bytes,
+        type: 'image/jpeg',
+        width: out.width,
+        height: out.height,
+        dataUrl: out.dataUrl
+      });
+      refreshPhotoList(document.getElementById('photo-list'));
+    }).catch(function (err) {
+      alert('Could not process ' + f.name + ': ' + (err && err.message ? err.message : 'unknown error'));
+    });
+  });
+
   if (rejected.length) {
     alert('These files were not added:\n\n' + rejected.join('\n') + '\n\nPhotos need to be real images and at least ' + Math.round(MIN_PHOTO_BYTES / 1024) + ' KB.');
   }
@@ -1299,7 +1349,16 @@ function buildPayload() {
     sop_gates_skipped: Object.keys(state.gateSkipReasons).map(k => ({ check: k, reason: state.gateSkipReasons[k] })),
     urgent_flags_ticked: state.urgentTicked,
     photos_count: state.photos.length,
-    photos_meta: state.photos.map(p => ({ name: p.name, size: p.size })),
+    photos: state.photos.map(function (p) {
+      return {
+        name: p.name,
+        type: p.type,
+        bytes: p.bytes,
+        width: p.width,
+        height: p.height,
+        data_url: p.dataUrl
+      };
+    }),
     routing_intent: routingHint()
   };
 }
