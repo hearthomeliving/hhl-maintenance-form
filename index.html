@@ -179,6 +179,13 @@ textarea {
   padding: 0;
 }
 .severity-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.suggestion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  min-height: 40px;
+}
 .sev-pill {
   flex: 1;
   min-width: 80px;
@@ -380,7 +387,7 @@ textarea {
 </head>
 <body>
 
-<div class="proto-banner"><strong>Prototype.</strong> Submissions post to the test pipeline. v0.5, built 2026-05-29.</div>
+<div class="proto-banner"><strong>Prototype.</strong> Submissions post to the test pipeline. v0.6, built 2026-05-29.</div>
 
 <div class="shell">
   <header class="app-header">
@@ -769,8 +776,136 @@ const SOP = {
   }
 };
 
-const STEP_LABELS = ['Safety check', 'About you', 'Quick checks', 'What’s wrong', 'SOP steps', 'Severity flags', 'Detail', 'Severity', 'Review', 'Sent'];
-const TOTAL_STEPS = 9;
+// Synonym map: words the user might type -> categories to surface
+// Used by the Step 3 typeahead to map plain English to SOP categories.
+const SYNONYM_MAP = {
+  'door': ['Front door or lock', 'Internal door', 'Lost keys or lock'],
+  'lock': ['Front door or lock', 'Lost keys or lock', 'Internal door'],
+  'jam': ['Front door or lock', 'Internal door'],
+  'jammed': ['Front door or lock', 'Internal door'],
+  'handle': ['Front door or lock', 'Internal door'],
+  'key': ['Lost keys or lock', 'Front door or lock'],
+  'keys': ['Lost keys or lock', 'Front door or lock'],
+  'lost': ['Lost keys or lock'],
+  'leak': ['Major leak', 'Leaking tap'],
+  'leaking': ['Major leak', 'Leaking tap'],
+  'drip': ['Leaking tap', 'Major leak'],
+  'dripping': ['Leaking tap', 'Major leak'],
+  'water': ['Major leak', 'Leaking tap', 'Blocked sink', 'Blocked toilet'],
+  'flood': ['Major leak'],
+  'flooding': ['Major leak'],
+  'tap': ['Leaking tap'],
+  'faucet': ['Leaking tap'],
+  'sink': ['Blocked sink', 'Leaking tap'],
+  'drain': ['Blocked sink', 'Blocked toilet'],
+  'toilet': ['Blocked toilet'],
+  'loo': ['Blocked toilet'],
+  'wc': ['Blocked toilet'],
+  'shower': ['Shower not working'],
+  'heat': ['Heating, boiler or hot water', 'Radiator cold'],
+  'heating': ['Heating, boiler or hot water', 'Radiator cold'],
+  'cold': ['Heating, boiler or hot water', 'Radiator cold'],
+  'freezing': ['Heating, boiler or hot water'],
+  'boiler': ['Heating, boiler or hot water'],
+  'hot': ['Heating, boiler or hot water'],
+  'warm': ['Heating, boiler or hot water'],
+  'radiator': ['Radiator cold', 'Heating, boiler or hot water'],
+  'rad': ['Radiator cold'],
+  'light': ['Lights not working'],
+  'lights': ['Lights not working'],
+  'bulb': ['Lights not working'],
+  'lamp': ['Lights not working'],
+  'dark': ['Lights not working', 'Power cut'],
+  'socket': ['Sockets not working', 'Power cut', 'Fuse board tripped'],
+  'sockets': ['Sockets not working'],
+  'plug': ['Sockets not working'],
+  'plugs': ['Sockets not working'],
+  'power': ['Power cut', 'Fuse board tripped', 'Sockets not working'],
+  'electric': ['Power cut', 'Fuse board tripped'],
+  'electricity': ['Power cut', 'Fuse board tripped'],
+  'fuse': ['Fuse board tripped'],
+  'fusebox': ['Fuse board tripped'],
+  'trip': ['Fuse board tripped'],
+  'tripped': ['Fuse board tripped'],
+  'breaker': ['Fuse board tripped'],
+  'oven': ['Oven (kitchen)'],
+  'hob': ['Hob (kitchen)'],
+  'stove': ['Hob (kitchen)', 'Oven (kitchen)'],
+  'cooker': ['Hob (kitchen)', 'Oven (kitchen)'],
+  'cook': ['Oven (kitchen)', 'Hob (kitchen)'],
+  'gas': ['Hob (kitchen)', 'Heating, boiler or hot water'],
+  'fridge': ['Fridge or freezer'],
+  'freezer': ['Fridge or freezer'],
+  'refrigerator': ['Fridge or freezer'],
+  'washing': ['Washing machine'],
+  'washer': ['Washing machine'],
+  'laundry': ['Washing machine', 'Tumble dryer'],
+  'dryer': ['Tumble dryer'],
+  'tumble': ['Tumble dryer'],
+  'dishwasher': ['Dishwasher'],
+  'dishes': ['Dishwasher'],
+  'window': ['Window broken or damaged'],
+  'glass': ['Window broken or damaged'],
+  'broken': ['Window broken or damaged', 'Broken bed or furniture'],
+  'smashed': ['Window broken or damaged'],
+  'cracked': ['Window broken or damaged'],
+  'alarm': ['Fire safety (alarm or fire door)'],
+  'alarms': ['Fire safety (alarm or fire door)'],
+  'fire': ['Fire safety (alarm or fire door)'],
+  'smoke': ['Fire safety (alarm or fire door)'],
+  'detector': ['Fire safety (alarm or fire door)'],
+  'beep': ['Fire safety (alarm or fire door)'],
+  'beeping': ['Fire safety (alarm or fire door)'],
+  'fence': ['Fence or gate damage'],
+  'fencing': ['Fence or gate damage'],
+  'gate': ['Fence or gate damage'],
+  'bed': ['Broken bed or furniture'],
+  'mattress': ['Broken bed or furniture'],
+  'furniture': ['Broken bed or furniture'],
+  'chair': ['Broken bed or furniture'],
+  'table': ['Broken bed or furniture'],
+  'wardrobe': ['Broken bed or furniture'],
+  'drawer': ['Broken bed or furniture'],
+  'damp': ['Damp or mould'],
+  'mould': ['Damp or mould'],
+  'mold': ['Damp or mould'],
+  'mildew': ['Damp or mould'],
+  'wet': ['Damp or mould', 'Major leak'],
+  'condensation': ['Damp or mould'],
+  'pest': ['Pests (insects, rodents, wasps)'],
+  'pests': ['Pests (insects, rodents, wasps)'],
+  'rat': ['Pests (insects, rodents, wasps)'],
+  'rats': ['Pests (insects, rodents, wasps)'],
+  'mouse': ['Pests (insects, rodents, wasps)'],
+  'mice': ['Pests (insects, rodents, wasps)'],
+  'wasp': ['Pests (insects, rodents, wasps)'],
+  'wasps': ['Pests (insects, rodents, wasps)'],
+  'bee': ['Pests (insects, rodents, wasps)'],
+  'bees': ['Pests (insects, rodents, wasps)'],
+  'insect': ['Pests (insects, rodents, wasps)'],
+  'insects': ['Pests (insects, rodents, wasps)'],
+  'ant': ['Pests (insects, rodents, wasps)'],
+  'ants': ['Pests (insects, rodents, wasps)'],
+  'cockroach': ['Pests (insects, rodents, wasps)'],
+  'wifi': ['Internet or Wi-Fi'],
+  'wi-fi': ['Internet or Wi-Fi'],
+  'internet': ['Internet or Wi-Fi'],
+  'router': ['Internet or Wi-Fi'],
+  'network': ['Internet or Wi-Fi'],
+  'broadband': ['Internet or Wi-Fi'],
+  'garden': ['Garden or external', 'Fence or gate damage'],
+  'outside': ['Garden or external'],
+  'driveway': ['Garden or external'],
+  'external': ['Garden or external'],
+  'patio': ['Garden or external'],
+  'thermostat': ['Thermostat confusion', 'Heating, boiler or hot water'],
+  'temperature': ['Thermostat confusion', 'Heating, boiler or hot water'],
+  'control': ['Thermostat confusion'],
+  'timer': ['Thermostat confusion', 'Heating, boiler or hot water']
+};
+
+const STEP_LABELS = ['Who and where', 'Safety check', 'Quick checks', 'What’s wrong', 'SOP steps', 'Urgent flags', 'Detail', 'Review', 'Sent'];
+const TOTAL_STEPS = 8;
 
 const SETTINGS_KEY = 'hahl-maintenance-settings-v1';
 const DEFAULT_SETTINGS = {
@@ -802,24 +937,25 @@ let settings = loadSettings();
 
 const state = {
   step: 0,
-  emergencyTicked: [],
   name: '',
   role: ROLES[0],
-  home: HOMES[0],
+  home: '',
   contactMethod: 'WhatsApp',
   contactValue: '',
+  emergencyTicked: [],
+  emergencyLogged: false,
   preChecks: {},
+  categoryQuery: '',
   category: '',
   gateStatus: {},
   gateSkipReasons: {},
   urgentTicked: [],
   description: '',
-  room: '',
+  rooms: [],
+  roomOther: '',
   noticedAt: '',
   photos: [],
   childrenInArea: 'No',
-  severity: 'Routine',
-  severityAutoBumped: false,
   refNumber: ''
 };
 
@@ -855,11 +991,6 @@ function renderProgress() {
     p.appendChild(s);
   }
   document.getElementById('step-counter').textContent = (state.step + 1) + ' of ' + TOTAL_STEPS;
-}
-
-function setSev(v, auto) {
-  state.severity = v;
-  state.severityAutoBumped = !!auto;
 }
 
 function selectField(name, value, options, opts) {
@@ -903,6 +1034,116 @@ function navButtons(opts) {
 }
 
 function renderStep0() {
+  // Who you are + which home. Asked first so emergency screen knows where + who.
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  screen.appendChild(el('p', { class: 'step-eyebrow' }, 'Who and where'));
+  screen.appendChild(el('h2', { class: 'step-title' }, 'Tell us a bit about yourself'));
+  screen.appendChild(el('p', { class: 'step-hint' }, 'So we can route this and reach you with updates.'));
+
+  // Home FIRST per Mark's feedback
+  const homeOpts = [{ value: '', label: 'Choose a home...' }].concat(HOMES.map(h => ({ value: h, label: h })));
+  screen.appendChild(field('Which home are you in?', selectField('home', state.home, homeOpts), null, true));
+
+  screen.appendChild(field('Your name', textField('name', state.name, 'Sarah K'), null, true));
+  screen.appendChild(field('Your role', selectField('role', state.role, ROLES), null, true));
+  screen.appendChild(field('Best way to reach you', selectField('contactMethod', state.contactMethod, ['WhatsApp', 'Phone call', 'Email']), null, true));
+  screen.appendChild(field('Contact number or email', textField('contactValue', state.contactValue, 'e.g. 07700 900123 or sarah@hearthomeliving.co.uk'), null, true));
+
+  screen.appendChild(navButtons({ back: false, onNext: () => {
+    if (!state.home) { alert('Please choose which home you are in.'); return; }
+    if (!state.name.trim()) { alert('Your name is required.'); return; }
+    if (!state.contactValue.trim()) { alert('Contact number or email is required.'); return; }
+    if (state.contactMethod === 'Email' && !state.contactValue.includes('@')) { alert('That does not look like an email address.'); return; }
+    state.step = 1; render();
+  } }));
+}
+
+function makeEmergencyItem(id, label, cls) {
+  const item = el('div', { class: 'check-item ' + (cls || '') });
+  const cb = el('input', { type: 'checkbox', id: 'cb-' + id, onchange: (e) => {
+    if (e.target.checked) state.emergencyTicked.push(label);
+    else state.emergencyTicked = state.emergencyTicked.filter(x => x !== label);
+    item.classList.toggle('checked', e.target.checked);
+  }});
+  if (state.emergencyTicked.includes(label)) { cb.checked = true; item.classList.add('checked'); }
+  item.appendChild(cb);
+  item.appendChild(el('label', { for: 'cb-' + id }, label));
+  return item;
+}
+
+function autoLogEmergency() {
+  // Silent fire-and-forget POST to n8n. User does not see this; they should be on the phone.
+  if (state.emergencyLogged) return;
+  state.emergencyLogged = true;
+  const webhook = settings.webhook_url || DEFAULT_SETTINGS.webhook_url;
+  const ref = 'EMERG-2026-' + String(Math.floor(Math.random() * 9000) + 1000);
+  state.refNumber = ref;
+  if (!webhook) return;
+  const payload = {
+    is_emergency: true,
+    reference: ref,
+    submitted_at: new Date().toISOString(),
+    notify_mark_to: settings.notify_mark_to || DEFAULT_SETTINGS.notify_mark_to,
+    submitter: {
+      name: state.name,
+      role: state.role,
+      contact_method: state.contactMethod,
+      contact_value: state.contactValue
+    },
+    home: state.home,
+    emergency_999_ticked: state.emergencyTicked.filter(function (t) { return EMERGENCY_999.indexOf(t) !== -1; }),
+    emergency_oncall_ticked: state.emergencyTicked.filter(function (t) { return ONCALL.indexOf(t) !== -1; })
+  };
+  fetch(webhook, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(function () { /* silent */ });
+}
+
+function renderEmergencyScreen() {
+  autoLogEmergency();
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  screen.appendChild(el('div', { class: 'danger-banner', html:
+    '<strong>This is not a maintenance ticket.</strong> Based on what you ticked, follow the right escalation path NOW. We have already logged this for the maintenance team to see.'
+  }));
+
+  const has999 = state.emergencyTicked.some(t => EMERGENCY_999.includes(t));
+  const hasOncall = state.emergencyTicked.some(t => ONCALL.includes(t));
+
+  if (has999) {
+    screen.appendChild(el('h2', { class: 'step-title' }, 'Call 999 now'));
+    screen.appendChild(el('p', { class: 'step-hint' }, 'Immediate danger to life.'));
+    screen.appendChild(el('ul', { style: 'font-size:14px; line-height: 1.6; padding-left: 18px;' }, [
+      el('li', null, 'Evacuate if needed.'),
+      el('li', null, 'Do not use switches if you smell gas.'),
+      el('li', null, 'Gas emergency: call 0800 111 999.'),
+      el('li', null, 'Then call 999.'),
+      el('li', { style: 'font-weight: 600;' }, 'And call your Manager now.')
+    ]));
+  }
+  if (hasOncall) {
+    screen.appendChild(el('h2', { class: 'step-title' }, 'Follow the on-call procedure'));
+    screen.appendChild(el('p', { class: 'step-hint' }, 'Immediate safeguarding risk that cannot be safely managed.'));
+    screen.appendChild(el('ul', { style: 'font-size:14px; line-height: 1.6; padding-left: 18px;' }, [
+      el('li', null, 'Call the on-call manager now.'),
+      el('li', null, 'Do not wait until morning.'),
+      el('li', { style: 'font-weight: 600;' }, 'And call your Manager now.')
+    ]));
+  }
+
+  screen.appendChild(el('div', { class: 'info-banner', style: 'margin-top: 12px;' },
+    'A record has been logged automatically with reference ' + state.refNumber + ' so the maintenance team know what is happening. You do not need to fill in the rest of the form right now. Focus on the call.'
+  ));
+
+  screen.appendChild(el('p', { class: 'foot-note' }, 'If you ticked something by mistake, go back and untick it.'));
+  screen.appendChild(navButtons({ onNext: () => { state.step = 1; render(); }, nextLabel: 'Back to the safety screen', backLabel: 'Close', primaryClass: 'btn-secondary' }));
+}
+
+function renderStep1() {
+  // Safety check, was Step 0 in v0.5. Now Step 1 so home + submitter are already captured.
   const screen = document.getElementById('screen');
   screen.innerHTML = '';
   screen.appendChild(el('p', { class: 'step-eyebrow' }, 'Safety first'));
@@ -921,78 +1162,9 @@ function renderStep0() {
 
   list.appendChild(el('p', { class: 'field-help', style: 'margin-top: 12px;' }, 'If nothing here applies, continue. If any apply, the next screen tells you what to do instead.'));
   screen.appendChild(list);
-  screen.appendChild(navButtons({ back: false, onNext: () => {
-    if (state.emergencyTicked.length > 0) renderEmergencyScreen();
-    else { state.step = 1; render(); }
-  } }));
-}
-
-function makeEmergencyItem(id, label, cls) {
-  const item = el('div', { class: 'check-item ' + (cls || '') });
-  const cb = el('input', { type: 'checkbox', id: 'cb-' + id, onchange: (e) => {
-    if (e.target.checked) state.emergencyTicked.push(label);
-    else state.emergencyTicked = state.emergencyTicked.filter(x => x !== label);
-    item.classList.toggle('checked', e.target.checked);
-  }});
-  if (state.emergencyTicked.includes(label)) { cb.checked = true; item.classList.add('checked'); }
-  item.appendChild(cb);
-  item.appendChild(el('label', { for: 'cb-' + id }, label));
-  return item;
-}
-
-function renderEmergencyScreen() {
-  const screen = document.getElementById('screen');
-  screen.innerHTML = '';
-  screen.appendChild(el('div', { class: 'danger-banner', html:
-    '<strong>This is not a maintenance ticket.</strong> Based on what you ticked, follow the right escalation path before using this form.'
-  }));
-
-  const has999 = state.emergencyTicked.some(t => EMERGENCY_999.includes(t));
-  const hasOncall = state.emergencyTicked.some(t => ONCALL.includes(t));
-
-  if (has999) {
-    screen.appendChild(el('h2', { class: 'step-title' }, 'Call 999 now'));
-    screen.appendChild(el('p', { class: 'step-hint' }, 'Immediate danger to life.'));
-    screen.appendChild(el('ul', { style: 'font-size:14px; line-height: 1.6; padding-left: 18px;' }, [
-      el('li', null, 'Evacuate if needed.'),
-      el('li', null, 'Do not use switches if you smell gas.'),
-      el('li', null, 'Gas emergency: call 0800 111 999.'),
-      el('li', null, 'Then call 999.'),
-      el('li', null, 'After the emergency is contained, log it in ClickUp.')
-    ]));
-  }
-  if (hasOncall) {
-    screen.appendChild(el('h2', { class: 'step-title' }, 'Follow the on-call procedure'));
-    screen.appendChild(el('p', { class: 'step-hint' }, 'Immediate safeguarding risk that cannot be safely managed.'));
-    screen.appendChild(el('ul', { style: 'font-size:14px; line-height: 1.6; padding-left: 18px;' }, [
-      el('li', null, 'Call the on-call manager now.'),
-      el('li', null, 'Do not wait until morning.'),
-      el('li', null, 'After the situation is contained, log it in ClickUp.')
-    ]));
-  }
-
-  screen.appendChild(el('p', { class: 'foot-note' }, 'If you ticked something by mistake, go back and untick it.'));
-  screen.appendChild(navButtons({ onNext: () => { state.step = 0; render(); }, nextLabel: 'Back to the safety screen', backLabel: 'Close', primaryClass: 'btn-secondary' }));
-}
-
-function renderStep1() {
-  const screen = document.getElementById('screen');
-  screen.innerHTML = '';
-  screen.appendChild(el('p', { class: 'step-eyebrow' }, 'About you'));
-  screen.appendChild(el('h2', { class: 'step-title' }, 'Who and where'));
-  screen.appendChild(el('p', { class: 'step-hint' }, 'So we can route the right person to the right home.'));
-
-  screen.appendChild(field('Your name', textField('name', state.name, 'Sarah K'), null, true));
-  screen.appendChild(field('Your role', selectField('role', state.role, ROLES), null, true));
-  screen.appendChild(field('Which home?', selectField('home', state.home, HOMES), null, true));
-  screen.appendChild(field('Best way to reach you', selectField('contactMethod', state.contactMethod, ['WhatsApp', 'Phone call', 'Email']), null, true));
-  screen.appendChild(field('Contact number or email', textField('contactValue', state.contactValue, 'e.g. 07700 900123 or sarah@hearthomeliving.co.uk'), null, true));
-
   screen.appendChild(navButtons({ onNext: () => {
-    if (!state.name.trim()) { alert('Your name is required.'); return; }
-    if (!state.contactValue.trim()) { alert('Contact number or email is required.'); return; }
-    if (state.contactMethod === 'Email' && !state.contactValue.includes('@')) { alert('That does not look like an email address.'); return; }
-    state.step = 2; render();
+    if (state.emergencyTicked.length > 0) renderEmergencyScreen();
+    else { state.step = 2; render(); }
   } }));
 }
 
@@ -1021,24 +1193,103 @@ function renderStep2() {
   screen.appendChild(navButtons({ onNext: () => { state.step = 3; render(); } }));
 }
 
+function suggestCategories(query) {
+  // Returns up to 6 categories matching the query, ordered by relevance.
+  const q = String(query || '').toLowerCase().trim();
+  if (!q) return [];
+  const tokens = q.split(/\s+/).filter(Boolean);
+  const scores = {};
+  const allCats = Object.keys(SOP);
+  tokens.forEach(function (tok) {
+    const syns = SYNONYM_MAP[tok];
+    if (syns) {
+      syns.forEach(function (cat, idx) {
+        scores[cat] = (scores[cat] || 0) + (10 - idx);
+      });
+    }
+    allCats.forEach(function (cat) {
+      if (cat.toLowerCase().indexOf(tok) !== -1) {
+        scores[cat] = (scores[cat] || 0) + 5;
+      }
+    });
+  });
+  const ranked = Object.keys(scores).sort(function (a, b) { return scores[b] - scores[a]; });
+  return ranked.slice(0, 6);
+}
+
 function renderStep3() {
   const screen = document.getElementById('screen');
   screen.innerHTML = '';
   screen.appendChild(el('p', { class: 'step-eyebrow' }, 'What’s wrong'));
-  screen.appendChild(el('h2', { class: 'step-title' }, 'Pick the closest category'));
-  screen.appendChild(el('p', { class: 'step-hint' }, 'The next screen will show the checks for this category.'));
+  screen.appendChild(el('h2', { class: 'step-title' }, 'Describe the issue in your own words'));
+  screen.appendChild(el('p', { class: 'step-hint' }, 'Type what is broken, like "door locked" or "leak in bathroom" or "boiler not working". Tap the closest match below.'));
 
-  const opts = Object.keys(SOP).map(k => ({ value: k, label: k }));
-  opts.unshift({ value: '', label: 'Choose a category...' });
-  screen.appendChild(field('Category', selectField('category', state.category, opts, { onchange: (v) => { if (!SOP[v]) return; state.gateStatus = {}; state.gateSkipReasons = {}; state.urgentTicked = []; }}), null, true));
+  const queryInput = el('input', {
+    type: 'text',
+    id: 'f-categoryQuery',
+    value: state.categoryQuery || '',
+    placeholder: 'e.g. door jammed, leak under sink, no hot water',
+    oninput: function (e) {
+      state.categoryQuery = e.target.value;
+      refreshSuggestions();
+    }
+  });
+  screen.appendChild(field('Describe the issue', queryInput, null, true));
 
-  if (state.category && SOP[state.category]) {
-    screen.appendChild(el('div', { class: 'info-banner' }, 'Next: the safe checks from your maintenance manual for this category. Tick what you have done. Skip a check only if you cannot do it.'));
-    screen.appendChild(el('p', { class: 'section-ref' }, SOP[state.category].ref));
+  const sugWrap = el('div', { class: 'suggestion-list', id: 'category-suggestions' });
+  screen.appendChild(sugWrap);
+
+  const fallback = el('div', { style: 'margin-top: 10px; font-size: 13px;' }, [
+    el('span', { class: 'field-help' }, "Can't find a match? "),
+    el('button', { class: 'skip-link', onclick: function (ev) {
+      ev.preventDefault();
+      pickCategory('Other (not listed above)');
+    }}, "Use 'Other'")
+  ]);
+  screen.appendChild(fallback);
+
+  function pickCategory(cat) {
+    if (state.category !== cat) {
+      state.category = cat;
+      state.gateStatus = {};
+      state.gateSkipReasons = {};
+      state.urgentTicked = [];
+    }
+    refreshSuggestions();
   }
 
+  function refreshSuggestions() {
+    const wrap = document.getElementById('category-suggestions');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    const suggestions = suggestCategories(state.categoryQuery);
+    if (suggestions.length === 0 && !state.category) {
+      wrap.appendChild(el('div', { class: 'field-help', style: 'padding: 8px 0;' }, 'Start typing to see matching categories.'));
+      return;
+    }
+    suggestions.forEach(function (cat) {
+      const item = el('div', {
+        class: 'check-item' + (state.category === cat ? ' checked' : ''),
+        style: 'cursor: pointer;',
+        onclick: function () { pickCategory(cat); }
+      }, [
+        el('span', { style: 'font-size: 18px; margin-right: 4px;' }, state.category === cat ? '✓' : '·'),
+        el('label', { style: 'cursor: pointer;' }, cat)
+      ]);
+      wrap.appendChild(item);
+    });
+    if (state.category) {
+      wrap.appendChild(el('div', { class: 'info-banner', style: 'margin-top: 12px;' }, 'Picked: ' + state.category + '. The next screen will show the safe checks from the maintenance manual for this category.'));
+      if (SOP[state.category] && SOP[state.category].ref) {
+        wrap.appendChild(el('p', { class: 'section-ref' }, SOP[state.category].ref));
+      }
+    }
+  }
+
+  refreshSuggestions();
+
   screen.appendChild(navButtons({ onNext: () => {
-    if (!state.category) { alert('Pick a category.'); return; }
+    if (!state.category) { alert('Type a few words and tap a category, or use Other.'); return; }
     state.step = 4; render();
   } }));
 }
@@ -1123,11 +1374,10 @@ function renderStep5() {
   }
 
   if (state.urgentTicked.length > 0) {
-    screen.appendChild(el('div', { class: 'warn-banner' }, 'Severity will be set to Urgent on submission. If this also matches an on-call situation, the form will redirect you back to the safety screen.'));
+    screen.appendChild(el('div', { class: 'warn-banner' }, 'These flags will be shown on the task so the maintenance team can see them during triage. They decide the severity.'));
   }
 
   screen.appendChild(navButtons({ onNext: () => {
-    if (state.urgentTicked.length > 0) setSev('Urgent', true);
     state.step = 6; render();
   } }));
 }
@@ -1143,7 +1393,43 @@ function renderStep6() {
     oninput: (e) => state.description = e.target.value }, state.description || '');
   screen.appendChild(field('What’s wrong', desc, 'Describe what is broken and where. The maintenance manual says: no child names in the description.', true));
 
-  screen.appendChild(field('Which room?', selectField('room', state.room, [''].concat(ROOMS).map(r => ({ value: r, label: r || 'Choose a room...' }))), 'Mandatory per the manual.', true));
+  // Multi-select rooms. If 'Other' is among them, show a text input.
+  const roomWrap = el('div', { class: 'check-list', style: 'max-height: 220px; overflow-y: auto;' });
+  ROOMS.forEach(function (r, i) {
+    const id = 'room_' + i;
+    const item = el('div', { class: 'check-item' + (state.rooms.indexOf(r) !== -1 ? ' checked' : '') });
+    const cb = el('input', {
+      type: 'checkbox',
+      id: 'cb-' + id,
+      checked: state.rooms.indexOf(r) !== -1 ? 'checked' : null,
+      onchange: function (e) {
+        if (e.target.checked) {
+          if (state.rooms.indexOf(r) === -1) state.rooms.push(r);
+        } else {
+          state.rooms = state.rooms.filter(function (x) { return x !== r; });
+          if (r === 'Other') state.roomOther = '';
+        }
+        item.classList.toggle('checked', e.target.checked);
+        const otherBox = document.getElementById('room-other-wrap');
+        if (otherBox) otherBox.style.display = state.rooms.indexOf('Other') !== -1 ? 'block' : 'none';
+      }
+    });
+    item.appendChild(cb);
+    item.appendChild(el('label', { for: 'cb-' + id }, r));
+    roomWrap.appendChild(item);
+  });
+  screen.appendChild(field('Which room(s)?', roomWrap, 'Tick all that apply. Mandatory per the manual.', true));
+
+  const otherWrap = el('div', { id: 'room-other-wrap', style: state.rooms.indexOf('Other') !== -1 ? 'display: block; margin-top: 4px;' : 'display: none; margin-top: 4px;' }, [
+    el('input', {
+      type: 'text',
+      id: 'f-roomOther',
+      value: state.roomOther || '',
+      placeholder: 'Describe where the issue is',
+      oninput: function (e) { state.roomOther = e.target.value; }
+    })
+  ]);
+  screen.appendChild(otherWrap);
 
   const now = new Date();
   const isoLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
@@ -1166,12 +1452,13 @@ function renderStep6() {
   refreshPhotoList(photoList);
   screen.appendChild(photoList);
 
-  screen.appendChild(field('Any children in the affected area?', selectField('childrenInArea', state.childrenInArea, ['No', 'Yes']), 'If Yes, severity floor becomes Priority automatically.'));
+  screen.appendChild(field('Any children in the affected area?', selectField('childrenInArea', state.childrenInArea, ['No', 'Yes']), 'Recorded on the task. The maintenance team uses this in triage.'));
 
   screen.appendChild(navButtons({ onNext: () => {
     if (!state.description.trim()) { alert('Description is mandatory.'); return; }
     if (state.description.trim().length < 10) { alert('Please describe what is wrong in a bit more detail (at least 10 characters).'); return; }
-    if (!state.room) { alert('Choose a room.'); return; }
+    if (state.rooms.length === 0) { alert('Choose at least one room.'); return; }
+    if (state.rooms.indexOf('Other') !== -1 && !state.roomOther.trim()) { alert('Please describe where the issue is in the Other text box.'); return; }
     if (!state.noticedAt) { alert('Set when you first noticed the issue.'); return; }
     if (state.photos.length === 0) { alert('At least one photo is mandatory per the manual.'); return; }
     state.step = 7; render();
@@ -1254,42 +1541,7 @@ function refreshPhotoList(container) {
 }
 
 function renderStep7() {
-  const screen = document.getElementById('screen');
-  screen.innerHTML = '';
-  screen.appendChild(el('p', { class: 'step-eyebrow' }, 'How urgent'));
-  screen.appendChild(el('h2', { class: 'step-title' }, 'Severity'));
-
-  if (state.severityAutoBumped) {
-    screen.appendChild(el('div', { class: 'warn-banner' }, 'You ticked at least one urgent flag, so severity is set to Urgent. You can lower it if that was a mistake, but the system will trust what you ticked.'));
-  }
-  if (state.childrenInArea === 'Yes' && state.severity === 'Routine') {
-    state.severity = 'Priority';
-    screen.appendChild(el('div', { class: 'info-banner' }, 'Children are in the affected area, so the severity floor is Priority.'));
-  }
-
-  screen.appendChild(el('p', { class: 'step-hint' }, 'Pick the one that matches.'));
-
-  const pills = el('div', { class: 'severity-pills' });
-  const sevs = [
-    { v: 'Routine', sub: 'As soon as practical' },
-    { v: 'Priority', sub: 'Within 48 hours' },
-    { v: 'Urgent', sub: 'Same day, safety risk' }
-  ];
-  sevs.forEach(s => {
-    const pill = el('div', { class: 'sev-pill' + (state.severity === s.v ? ' selected' : ''), onclick: () => { state.severity = s.v; renderStep7(); }}, [
-      s.v,
-      el('span', { class: 'sub' }, s.sub)
-    ]);
-    pills.appendChild(pill);
-  });
-  screen.appendChild(pills);
-
-  screen.appendChild(el('p', { class: 'field-help', style: 'margin-top: 12px;' }, 'From the manual: Routine for most issues, Priority for significant disruption that is not a safety risk, Urgent for same-day safety or safeguarding concerns.'));
-
-  screen.appendChild(navButtons({ onNext: () => { state.step = 8; render(); } }));
-}
-
-function renderStep8() {
+  // Review screen. Was Step 8 in v0.5. No severity row.
   const screen = document.getElementById('screen');
   screen.innerHTML = '';
   screen.appendChild(el('p', { class: 'step-eyebrow' }, 'Review'));
@@ -1303,8 +1555,11 @@ function renderStep8() {
   sum.appendChild(row('Submitter', state.name + ' (' + state.role + ')'));
   sum.appendChild(row('Reachable on', state.contactMethod + ' — ' + state.contactValue));
   sum.appendChild(row('Category', state.category));
-  sum.appendChild(row('Room', state.room));
-  sum.appendChild(row('Severity', state.severity + (state.severityAutoBumped ? ' (auto)' : '')));
+  var roomText = state.rooms.slice();
+  if (state.rooms.indexOf('Other') !== -1 && state.roomOther) {
+    roomText = roomText.filter(function (r) { return r !== 'Other'; }).concat(['Other: ' + state.roomOther]);
+  }
+  sum.appendChild(row('Room(s)', roomText.join(', ')));
   sum.appendChild(row('Children in area', state.childrenInArea));
   sum.appendChild(row('First noticed', state.noticedAt));
   sum.appendChild(row('Photos', String(state.photos.length)));
@@ -1312,6 +1567,10 @@ function renderStep8() {
   const gateDone = Object.keys(state.gateStatus).filter(k => state.gateStatus[k] === 'done').length;
   const gateSkipped = Object.keys(state.gateSkipReasons).length;
   sum.appendChild(row('SOP checks', gateDone + ' done, ' + gateSkipped + ' skipped'));
+
+  if (state.urgentTicked.length > 0) {
+    sum.appendChild(row('Urgent flags', state.urgentTicked.length + ' ticked'));
+  }
 
   const descRow = el('div', { class: 'summary-row block' }, [
     el('span', { class: 'label' }, 'Description'),
@@ -1321,11 +1580,14 @@ function renderStep8() {
 
   screen.appendChild(sum);
 
+  screen.appendChild(el('p', { class: 'field-help', style: 'margin-top: 10px;' }, 'The maintenance team will set severity when they triage this. You do not need to.'));
+
   screen.appendChild(navButtons({ onNext: submit, nextLabel: 'Submit request' }));
 }
 
 function buildPayload() {
   return {
+    is_emergency: false,
     reference: state.refNumber,
     submitted_at: new Date().toISOString(),
     notify_mark_to: settings.notify_mark_to || DEFAULT_SETTINGS.notify_mark_to,
@@ -1337,10 +1599,10 @@ function buildPayload() {
       contact_value: state.contactValue
     },
     home: state.home,
-    room: state.room,
+    rooms: state.rooms,
+    room_other_text: state.roomOther || '',
     category: state.category,
-    severity: state.severity,
-    severity_auto_bumped: state.severityAutoBumped,
+    category_query: state.categoryQuery,
     children_in_area: state.childrenInArea,
     noticed_at: state.noticedAt,
     description: state.description,
@@ -1358,15 +1620,8 @@ function buildPayload() {
         height: p.height,
         data_url: p.dataUrl
       };
-    }),
-    routing_intent: routingHint()
+    })
   };
-}
-
-function routingHint() {
-  if (state.severity === 'Urgent') return 'WhatsApp Mark immediately + auto-email contractor based on category';
-  if (state.severity === 'Priority') return 'Email Mark + email preferred contractor';
-  return 'Daily digest to Mark, contractor email when triaged';
 }
 
 let lastSubmitStatus = null;
@@ -1375,7 +1630,7 @@ function submit() {
   state.refNumber = 'MAINT-2026-' + String(Math.floor(Math.random() * 9000) + 1000);
   const webhook = settings.webhook_url || DEFAULT_SETTINGS.webhook_url;
   lastSubmitStatus = webhook ? 'sending' : 'no-webhook';
-  state.step = 9;
+  state.step = 8;
   render();
   if (!webhook) return;
   const payload = buildPayload();
@@ -1385,10 +1640,10 @@ function submit() {
     body: JSON.stringify(payload)
   }).then(function (res) {
     lastSubmitStatus = res.ok ? 'success' : ('http-' + res.status);
-    if (state.step === 9) render();
+    if (state.step === 8) render();
   }).catch(function (err) {
     lastSubmitStatus = 'error: ' + ((err && err.message) || 'fetch failed');
-    if (state.step === 9) render();
+    if (state.step === 8) render();
   });
 }
 
@@ -1460,7 +1715,7 @@ function closeSettings() {
   overlay.innerHTML = '';
 }
 
-function renderStep9() {
+function renderStep8() {
   const screen = document.getElementById('screen');
   screen.innerHTML = '';
   screen.appendChild(el('div', { class: 'success-icon' }, '✓'));
@@ -1498,18 +1753,19 @@ function renderStep9() {
 function resetState() {
   lastSubmitStatus = null;
   state.emergencyTicked = [];
+  state.emergencyLogged = false;
   state.preChecks = {};
+  state.categoryQuery = '';
   state.category = '';
   state.gateStatus = {};
   state.gateSkipReasons = {};
   state.urgentTicked = [];
   state.description = '';
-  state.room = '';
+  state.rooms = [];
+  state.roomOther = '';
   state.noticedAt = '';
   state.photos = [];
   state.childrenInArea = 'No';
-  state.severity = 'Routine';
-  state.severityAutoBumped = false;
   state.refNumber = '';
 }
 
@@ -1530,7 +1786,6 @@ function render() {
     case 6: renderStep6(); break;
     case 7: renderStep7(); break;
     case 8: renderStep8(); break;
-    case 9: renderStep9(); break;
     default: renderStep0();
   }
 }
