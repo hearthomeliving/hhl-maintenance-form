@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Home Setup & Staffing Calculator</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#fff; --ink:#1c2430; --muted:#697586; --line:#e3e8f0;
+    --accent:#2f6fed; --accent-ink:#fff; --good:#1f9d57; --good-bg:#e7f6ee;
+    --radius:14px; --shadow:0 1px 3px rgba(16,24,40,.06),0 6px 24px rgba(16,24,40,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.5}
+  .wrap{max-width:680px;margin:0 auto;padding:24px 16px 64px}
+  .head{margin:8px 0 20px}
+  .head h1{font-size:24px;margin:0 0 6px}
+  .head p{margin:0;color:var(--muted);font-size:15px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 14px}
+  .field{margin-bottom:18px}.field:last-child{margin-bottom:0}
+  label.q{display:block;font-weight:600;font-size:15px;margin-bottom:4px}
+  .hint{display:block;color:var(--muted);font-size:13px;margin-bottom:8px}
+  .req{color:#d92d20}
+  input[type=text],input[type=number],select{width:100%;padding:12px 14px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-family:inherit}
+  input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,111,237,.15)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:520px){.grid2{grid-template-columns:1fr}}
+  .entry{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+  .entry select{flex:1}
+  .entry .rm{flex:0 0 auto;width:40px;height:44px;border:1px solid var(--line);background:#fff;border-radius:10px;font-size:20px;cursor:pointer;color:#b42318}
+  .addbtn{padding:11px 16px;border:1px dashed var(--accent);background:#f3f7ff;color:var(--accent);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer}
+  .empty{color:var(--muted);font-size:14px;font-style:italic;margin-bottom:10px}
+  /* Calc panel */
+  .calc{background:linear-gradient(180deg,#0f1f3d,#15294d);color:#fff;border:none}
+  .calc h2{color:#9fb4dd}
+  .calc .big{font-size:44px;font-weight:800;line-height:1}
+  .calc .biglabel{color:#aebfe0;font-size:14px;margin-top:4px}
+  .calc .rows{margin-top:16px;border-top:1px solid rgba(255,255,255,.12);padding-top:14px}
+  .calc .row{display:flex;justify-content:space-between;font-size:14px;padding:4px 0;color:#dbe6fb}
+  .calc .row b{color:#fff}
+  .calc .note{font-size:12px;color:#8aa0c8;margin-top:12px}
+  .submit{width:100%;padding:16px;font-size:17px;font-weight:700;color:#fff;background:var(--accent);border:none;border-radius:12px;cursor:pointer}
+  .submit:disabled{opacity:.6}
+  .err{background:#fef3f2;border:1px solid #fecdca;color:#b42318;padding:12px 14px;border-radius:10px;font-size:14px;margin-bottom:14px;display:none}
+  .done{display:none;text-align:center;padding:36px 20px}
+  .done .tick{width:64px;height:64px;border-radius:50%;background:var(--good-bg);color:var(--good);display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 16px}
+  .done h2{font-size:22px;margin:0 0 8px;text-transform:none;letter-spacing:0}
+  .done p{color:var(--muted);margin:0 0 20px}
+  .done button{padding:12px 20px;border:1px solid var(--line);background:#fff;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer}
+  .footnote{color:var(--muted);font-size:12px;text-align:center;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>Home Setup & Staffing Calculator</h1>
+    <p>Only used when you add a new home or its placements / needs change. The staffing figure is an estimate to guide establishment — it never changes the numbers you enter.</p>
+  </div>
+
+  <form id="form">
+    <div class="err" id="err"></div>
+
+    <div class="card">
+      <h2>The home</h2>
+      <div class="field">
+        <label class="q">Which home? <span class="req">*</span></label>
+        <span class="hint">Pick a home to view and edit it, or choose "Add a new home" to create one.</span>
+        <select id="home_select"><option value="">Loading homes…</option></select>
+        <div id="newhome_wrap" style="display:none;margin-top:12px">
+          <label class="q">New home name</label>
+          <input type="text" id="new_home" placeholder="e.g. Vega House" />
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label class="q">Max children that can be placed <span class="req">*</span></label>
+          <span class="hint">The home's registered capacity.</span>
+          <input type="number" id="max_placements" min="0" value="0" />
+        </div>
+        <div class="field">
+          <label class="q">Children currently placed <span class="req">*</span></label>
+          <span class="hint">How many are placed right now.</span>
+          <input type="number" id="current_placements" min="0" value="0" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Base group-living cover</h2>
+      <span class="hint">Staff on shift for general group cover, before any 1:1s. (A small home is often 2 by day, 1 waking at night.)</span>
+      <div class="grid2">
+        <div class="field">
+          <label class="q">Staff on by day</label>
+          <input type="number" id="base_day" min="0" value="2" />
+        </div>
+        <div class="field">
+          <label class="q">Staff on at night</label>
+          <input type="number" id="base_night" min="0" value="1" />
+        </div>
+      </div>
+      <div class="field">
+        <label class="q">Full-time contracted hours / week</label>
+        <span class="hint">Used to convert total cover hours into a headcount.</span>
+        <input type="number" id="contracted_hours" min="1" step="0.5" value="37.5" />
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Children's staffing needs</h2>
+      <span class="hint">Add a row for each child needing dedicated cover. Group-living children don't need a row. Pick the ratio and whether the cover is waking hours only or 24 hours.</span>
+      <div id="needs_list"></div>
+      <button type="button" class="addbtn" id="add_need">+ Add a high-needs child</button>
+    </div>
+
+    <!-- LIVE CALCULATOR -->
+    <div class="card calc">
+      <h2>Estimated staff required</h2>
+      <div class="big" id="calc_num">–</div>
+      <div class="biglabel">staff to cover this home 24/7 (incl. 20% leave/sickness/training)</div>
+      <div class="rows" id="calc_rows"></div>
+      <div class="note">An estimate from an assumed 24/7 rota (day 14h / night 10h). Zero-hours &amp; bank staff typically fill the 20% flex. This is advisory only.</div>
+    </div>
+
+    <button class="submit" id="submitBtn" type="submit">Save home</button>
+    <div class="footnote">Saves to the staffing system. Live staff-in-post counts are not affected.</div>
+  </form>
+
+  <div class="done" id="done">
+    <div class="tick">✓</div>
+    <h2>Home saved</h2>
+    <p id="donemsg">The home and its estimated staffing have been saved.</p>
+    <button type="button" onclick="location.reload()">Add or edit another</button>
+  </div>
+
+</div>
+
+<script>
+  const WEBHOOK_URL = "https://ruthbloch.app.n8n.cloud/webhook/recruitment-home-setup";
+  const STAFFING_URL = "https://ruthbloch.app.n8n.cloud/webhook/recruitment-staffing";
+  const DAY_H = 14, NIGHT_H = 10, UPLIFT = 0.20;
+
+  // Load existing homes into the dropdown (+ an "Add new" option), keep full records for editing
+  var EXISTING = [];
+  var sel = document.getElementById('home_select');
+  var newWrap = document.getElementById('newhome_wrap');
+  fetch(STAFFING_URL).then(function(r){return r.json();}).then(function(d){
+    EXISTING = d.homes || [];
+    buildSelect();
+  }).catch(function(){ EXISTING = []; buildSelect(); });
+
+  function buildSelect(){
+    var opts = '<option value="">Select a home…</option>';
+    EXISTING.forEach(function(h){ opts += '<option value="' + h.home + '">' + h.home + '</option>'; });
+    opts += '<option value="__new__">➕ Add a new home…</option>';
+    sel.innerHTML = opts;
+  }
+  function findHome(name){ name=(name||'').trim().toLowerCase(); return EXISTING.filter(function(h){ return String(h.home).toLowerCase()===name; })[0]; }
+  function defaults(){
+    document.getElementById('max_placements').value = 0;
+    document.getElementById('current_placements').value = 0;
+    document.getElementById('base_day').value = 2;
+    document.getElementById('base_night').value = 1;
+    document.getElementById('contracted_hours').value = 37.5;
+    document.getElementById('needs_list').innerHTML = ''; showEmpty(); recalc();
+  }
+  function populateFrom(h){
+    document.getElementById('max_placements').value = h.max_placements || 0;
+    document.getElementById('current_placements').value = h.current_placements || 0;
+    document.getElementById('base_day').value = (h.base_day != null ? h.base_day : 2);
+    document.getElementById('base_night').value = (h.base_night != null ? h.base_night : 1);
+    document.getElementById('contracted_hours').value = (h.contracted_hours ? h.contracted_hours : 37.5);
+    var list = document.getElementById('needs_list'); list.innerHTML = '';
+    var added = 0;
+    String(h.needs_summary || '').split(';').forEach(function(part){
+      var m = part.trim().match(/^(\d+):1\s+(waking|24h)/i);
+      if (m) { addNeedRow(parseInt(m[1],10), m[2].toLowerCase()); added++; }
+    });
+    if (!added) showEmpty();
+    recalc();
+  }
+  sel.addEventListener('change', function(){
+    if (this.value === '__new__') { newWrap.style.display = 'block'; document.getElementById('new_home').focus(); defaults(); }
+    else { newWrap.style.display = 'none'; var h = findHome(this.value); if (h) populateFrom(h); else defaults(); }
+  });
+  function getHomeName(){
+    if (sel.value === '__new__') return document.getElementById('new_home').value.trim();
+    return sel.value.trim();
+  }
+
+  // High-needs repeater
+  function addNeedRow(ratio, coverage){
+    var list = document.getElementById('needs_list');
+    var empty = list.querySelector('.empty'); if (empty) empty.remove();
+    var row = document.createElement('div'); row.className='entry';
+    row.innerHTML =
+      '<select class="need-ratio"><option value="1">1:1 (one staff)</option><option value="2">2:1 (two staff)</option><option value="3">3:1 (three staff)</option></select>' +
+      '<select class="need-cov"><option value="waking">Waking hours (~14h)</option><option value="24h">24 hours</option></select>' +
+      '<button type="button" class="rm" title="Remove">×</button>';
+    if (ratio) row.querySelector('.need-ratio').value = String(ratio);
+    if (coverage) row.querySelector('.need-cov').value = coverage;
+    row.querySelector('.rm').addEventListener('click', function(){ row.remove(); if(!list.querySelector('.entry')) showEmpty(); recalc(); });
+    row.querySelectorAll('select').forEach(function(s){ s.addEventListener('change', recalc); });
+    list.appendChild(row); recalc();
+  }
+  function addNeed(){ addNeedRow(1, 'waking'); }
+  function showEmpty(){
+    var list = document.getElementById('needs_list');
+    if (list.querySelector('.empty')) return;
+    var e=document.createElement('div'); e.className='empty'; e.textContent='No high-needs children added — group living only.'; list.appendChild(e);
+  }
+  showEmpty();
+  document.getElementById('add_need').addEventListener('click', addNeed);
+
+  function collectNeeds(){
+    return Array.prototype.slice.call(document.querySelectorAll('#needs_list .entry')).map(function(e){
+      return { ratio: parseInt(e.querySelector('.need-ratio').value,10), coverage: e.querySelector('.need-cov').value };
+    });
+  }
+  function n(id){ var v=parseFloat(document.getElementById(id).value); return isNaN(v)?0:v; }
+
+  function recalc(){
+    var baseDay=n('base_day'), baseNight=n('base_night'), contracted=n('contracted_hours')||37.5;
+    var needs=collectNeeds(); var dayExtra=0, nightExtra=0;
+    needs.forEach(function(nd){ dayExtra+=nd.ratio; if(nd.coverage==='24h') nightExtra+=nd.ratio; });
+    var dayConc=baseDay+dayExtra, nightConc=baseNight+nightExtra;
+    var weekly=(dayConc*DAY_H + nightConc*NIGHT_H)*7;
+    var coreWTE = contracted>0 ? weekly/contracted : 0;
+    var required = Math.ceil(coreWTE*(1+UPLIFT));
+    document.getElementById('calc_num').textContent = required;
+    document.getElementById('calc_rows').innerHTML =
+      '<div class="row"><span>On shift — day</span><b>'+dayConc+'</b></div>' +
+      '<div class="row"><span>On shift — night</span><b>'+nightConc+'</b></div>' +
+      '<div class="row"><span>Cover hours / week</span><b>'+Math.round(weekly)+'h</b></div>' +
+      '<div class="row"><span>Core full-time staff</span><b>'+(Math.round(coreWTE*10)/10)+'</b></div>' +
+      '<div class="row"><span>+20% leave / sickness / training</span><b>'+required+'</b></div>';
+    return { required: required };
+  }
+  ['base_day','base_night','contracted_hours'].forEach(function(id){ document.getElementById(id).addEventListener('input', recalc); });
+  recalc();
+
+  // Submit
+  var form=document.getElementById('form'), errBox=document.getElementById('err'), btn=document.getElementById('submitBtn');
+  form.addEventListener('submit', function(e){
+    e.preventDefault(); errBox.style.display='none';
+    var home=getHomeName();
+    if(!home){ errBox.textContent='Please select a home, or choose "Add a new home" and type a name.'; errBox.style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); return; }
+    var payload={
+      home: home,
+      max_placements: n('max_placements'),
+      current_placements: n('current_placements'),
+      base_day: n('base_day'),
+      base_night: n('base_night'),
+      contracted_hours: n('contracted_hours')||37.5,
+      needs: collectNeeds()
+    };
+    var est=recalc().required;
+    btn.disabled=true; btn.textContent='Saving…';
+    fetch(WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+      .then(function(r){ if(!r.ok) throw new Error(r.status);
+        document.getElementById('donemsg').textContent = home+' saved — estimated '+est+' staff required.';
+        form.style.display='none'; document.getElementById('done').style.display='block'; window.scrollTo({top:0,behavior:'smooth'});
+      })
+      .catch(function(){ errBox.textContent='Something went wrong saving. Check your connection and try again.'; errBox.style.display='block'; btn.disabled=false; btn.textContent='Save home'; });
+  });
+</script>
+</body>
+</html>

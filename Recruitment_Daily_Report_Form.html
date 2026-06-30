@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>End-of-Day Recruitment Report</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#ffffff; --ink:#1c2430; --muted:#697586;
+    --line:#e3e8f0; --accent:#2f6fed; --accent-ink:#fff;
+    --good:#1f9d57; --good-bg:#e7f6ee; --warn:#b54708; --chip:#eef2f9;
+    --radius:14px; --shadow:0 1px 3px rgba(16,24,40,.06),0 6px 24px rgba(16,24,40,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:680px;margin:0 auto;padding:24px 16px 64px}
+  .head{margin:8px 0 20px}
+  .head h1{font-size:24px;margin:0 0 6px}
+  .head p{margin:0;color:var(--muted);font-size:15px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 14px}
+  .field{margin-bottom:18px}
+  .field:last-child{margin-bottom:0}
+  label.q{display:block;font-weight:600;font-size:15px;margin-bottom:4px}
+  .hint{display:block;color:var(--muted);font-size:13px;margin-bottom:8px}
+  input[type=text],input[type=date],input[type=number],textarea{
+    width:100%;padding:12px 14px;font-size:16px;border:1px solid var(--line);
+    border-radius:10px;background:#fff;color:var(--ink);font-family:inherit}
+  input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,111,237,.15)}
+  textarea{min-height:84px;resize:vertical}
+  .req{color:#d92d20}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:520px){.grid2{grid-template-columns:1fr}}
+  .num{display:flex;align-items:center;gap:8px}
+  .num button{width:44px;height:44px;border:1px solid var(--line);background:#fff;border-radius:10px;
+    font-size:22px;line-height:1;cursor:pointer;color:var(--ink);flex:0 0 auto}
+  .num button:active{background:var(--chip)}
+  .num input{text-align:center;font-weight:600}
+  .toggle{display:flex;gap:10px}
+  .toggle button{flex:1;padding:12px;border:1px solid var(--line);background:#fff;border-radius:10px;
+    font-size:15px;font-weight:600;cursor:pointer;color:var(--ink)}
+  .toggle button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .reveal{margin-top:12px;display:none}
+  .reveal.show{display:block}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{padding:9px 13px;border:1px solid var(--line);background:var(--chip);border-radius:999px;
+    font-size:14px;cursor:pointer;user-select:none}
+  .chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .submit{width:100%;padding:16px;font-size:17px;font-weight:700;color:#fff;background:var(--accent);
+    border:none;border-radius:12px;cursor:pointer;margin-top:4px}
+  .submit:disabled{opacity:.6;cursor:not-allowed}
+  .err{background:#fef3f2;border:1px solid #fecdca;color:#b42318;padding:12px 14px;border-radius:10px;
+    font-size:14px;margin-bottom:14px;display:none}
+  .done{display:none;text-align:center;padding:36px 20px}
+  .done .tick{width:64px;height:64px;border-radius:50%;background:var(--good-bg);color:var(--good);
+    display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 16px}
+  .done h2{font-size:22px;margin:0 0 8px;color:var(--ink);text-transform:none;letter-spacing:0}
+  .done p{color:var(--muted);margin:0 0 20px}
+  .done button{padding:12px 20px;border:1px solid var(--line);background:#fff;border-radius:10px;
+    font-size:15px;font-weight:600;cursor:pointer}
+  .footnote{color:var(--muted);font-size:12px;text-align:center;margin-top:8px}
+  /* Live staffing panel */
+  .panel{background:linear-gradient(180deg,#0f1f3d,#15294d);border:none;color:#fff}
+  .panel h2{color:#9fb4dd}
+  .panel .totals{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .pill{flex:1;min-width:96px;background:rgba(255,255,255,.08);border-radius:12px;padding:12px;text-align:center}
+  .pill .n{font-size:24px;font-weight:800;line-height:1}
+  .pill .l{font-size:12px;color:#aebfe0;margin-top:4px}
+  .homes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:520px){.homes{grid-template-columns:1fr}}
+  .home{background:rgba(255,255,255,.06);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center}
+  .home .name{font-weight:700}
+  .home .meta{font-size:12px;color:#aebfe0}
+  .home .vac{font-size:22px;font-weight:800}
+  .home .vac.zero{color:#7fe0a6}
+  .home .vac.some{color:#ffd28a}
+  .panel .loading{color:#aebfe0;font-size:14px}
+  .panel .stamp{font-size:11px;color:#8aa0c8;margin-top:12px;text-align:right}
+  select{width:100%;padding:12px 14px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-family:inherit}
+  select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,111,237,.15)}
+  .entry{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+  .entry select{flex:0 0 38%}
+  .entry input{flex:1}
+  .entry .rm{flex:0 0 auto;width:40px;height:44px;border:1px solid var(--line);background:#fff;border-radius:10px;
+    font-size:20px;line-height:1;cursor:pointer;color:#b42318}
+  .entry .rm:active{background:#fef3f2}
+  .addbtn{padding:11px 16px;border:1px dashed var(--accent);background:#f3f7ff;color:var(--accent);
+    border-radius:10px;font-size:14px;font-weight:600;cursor:pointer}
+  .empty{color:var(--muted);font-size:14px;font-style:italic;margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>End-of-Day Recruitment Report</h1>
+    <p>Takes about 2 minutes. Every box has a hint. If a number is zero, just leave it at 0.</p>
+  </div>
+
+  <!-- LIVE STAFFING PANEL -->
+  <div class="card panel">
+    <h2>Current staffing across homes</h2>
+    <div class="totals" id="totals"><span class="loading">Loading live figures…</span></div>
+    <div class="homes" id="homes"></div>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <form id="form">
+    <div class="err" id="err"></div>
+
+    <!-- WHO + WHEN -->
+    <div class="card">
+      <h2>The basics</h2>
+      <div class="grid2">
+        <div class="field">
+          <label class="q">Reporting date <span class="req">*</span></label>
+          <span class="hint">The day you're reporting on.</span>
+          <input type="date" id="reporting_date" required />
+        </div>
+        <div class="field">
+          <label class="q">Your name <span class="req">*</span></label>
+          <span class="hint">Who's filling this in.</span>
+          <input type="text" id="recruiter" placeholder="e.g. Addy" required />
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVITY -->
+    <div class="card">
+      <h2>What you did today</h2>
+      <div class="grid2">
+        <div class="field">
+          <label class="q">Calls made</label>
+          <span class="hint">Candidate or agency calls.</span>
+          <div class="num"><button type="button" data-step="calls" data-d="-1">−</button>
+            <input type="number" id="calls" min="0" value="0" /><button type="button" data-step="calls" data-d="1">+</button></div>
+        </div>
+        <div class="field">
+          <label class="q">CVs sourced</label>
+          <span class="hint">New CVs found or received.</span>
+          <div class="num"><button type="button" data-step="cvs" data-d="-1">−</button>
+            <input type="number" id="cvs" min="0" value="0" /><button type="button" data-step="cvs" data-d="1">+</button></div>
+        </div>
+        <div class="field">
+          <label class="q">Screenings booked</label>
+          <span class="hint">Phone / initial screenings booked.</span>
+          <div class="num"><button type="button" data-step="screenings" data-d="-1">−</button>
+            <input type="number" id="screenings" min="0" value="0" /><button type="button" data-step="screenings" data-d="1">+</button></div>
+        </div>
+        <div class="field">
+          <label class="q">Interviews held</label>
+          <span class="hint">Interviews actually completed.</span>
+          <div class="num"><button type="button" data-step="interviews" data-d="-1">−</button>
+            <input type="number" id="interviews" min="0" value="0" /><button type="button" data-step="interviews" data-d="1">+</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JOINERS / LEAVERS -->
+    <div class="card">
+      <h2>Joiners & leavers</h2>
+      <div class="field">
+        <label class="q">Anyone join today?</label>
+        <span class="hint">Add a row for each person who started — pick their home and type their name &amp; role. Each one bumps that home's staffing up by 1. Leave empty if nobody joined.</span>
+        <div id="joiners_list"></div>
+        <button type="button" class="addbtn" id="add_joiner">+ Add a joiner</button>
+      </div>
+      <div class="field">
+        <label class="q">Anyone leave today?</label>
+        <span class="hint">Add a row for each person who left. Each one drops that home's staffing by 1. Leave empty if nobody left.</span>
+        <div id="leavers_list"></div>
+        <button type="button" class="addbtn" id="add_leaver">+ Add a leaver</button>
+      </div>
+    </div>
+
+    <!-- PIPELINE -->
+    <div class="card">
+      <h2>Pipeline</h2>
+      <div class="grid2">
+        <div class="field">
+          <label class="q">Candidates in the pipeline now</label>
+          <span class="hint">Everyone not yet started and not rejected.</span>
+          <div class="num"><button type="button" data-step="pipeline_count" data-d="-1">−</button>
+            <input type="number" id="pipeline_count" min="0" value="0" /><button type="button" data-step="pipeline_count" data-d="1">+</button></div>
+        </div>
+        <div class="field">
+          <label class="q">Of those, at offer / awaiting DBS or refs</label>
+          <span class="hint">The ones close to the finish line.</span>
+          <div class="num"><button type="button" data-step="near_offer_count" data-d="-1">−</button>
+            <input type="number" id="near_offer_count" min="0" value="0" /><button type="button" data-step="near_offer_count" data-d="1">+</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETBACKS -->
+    <div class="card">
+      <h2>Setbacks today</h2>
+      <div class="field">
+        <span class="hint">Tap any that apply — then add a note if you like. If nothing went wrong, leave all unticked.</span>
+        <div class="chips" id="chips">
+          <span class="chip" data-flag="Stuck vacancy">Stuck vacancy</span>
+          <span class="chip" data-flag="No-show">No-show</span>
+          <span class="chip" data-flag="Slow DBS">Slow DBS</span>
+          <span class="chip" data-flag="Slow references">Slow references</span>
+          <span class="chip" data-flag="Hard-to-fill">Hard-to-fill role</span>
+        </div>
+      </div>
+      <div class="field">
+        <label class="q">Notes (optional)</label>
+        <textarea id="setbacks_notes" placeholder="e.g. Leo Night Senior still open after 3 weeks; 1 no-show at Cygnus"></textarea>
+      </div>
+    </div>
+
+    <!-- PLAN -->
+    <div class="card">
+      <h2>Plan for tomorrow</h2>
+      <div class="field">
+        <label class="q">Top 3 things you'll do tomorrow <span class="req">*</span></label>
+        <span class="hint">Keep it short — bullets are fine.</span>
+        <textarea id="plan_tomorrow" placeholder="1. Aurora 2nd interviews&#10;2. Chase 3 outstanding DBS&#10;3. Re-advertise Leo nights" required></textarea>
+      </div>
+    </div>
+
+    <button class="submit" id="submitBtn" type="submit">Submit report</button>
+    <div class="footnote">Your answers create a dated report in ClickUp automatically.</div>
+  </form>
+
+  <!-- SUCCESS -->
+  <div class="done" id="done">
+    <div class="tick">✓</div>
+    <h2>Report submitted</h2>
+    <p>Thanks — your end-of-day report has been logged in ClickUp.</p>
+    <button type="button" onclick="location.reload()">Submit another</button>
+  </div>
+
+</div>
+
+<script>
+  // === The only line you may need to change ===
+  // Production URL (works once the n8n workflow is ACTIVE):
+  const WEBHOOK_URL = "https://ruthbloch.app.n8n.cloud/webhook/recruitment-daily-report-html";
+  // For a one-off test before activating, swap to the test URL and click "Listen for test event" in n8n:
+  // const WEBHOOK_URL = "https://ruthbloch.app.n8n.cloud/webhook-test/recruitment-daily-report-html";
+
+  // Live staffing read endpoint (the "Recruitment - Staffing Read API" workflow must be ACTIVE):
+  const STAFFING_URL = "https://ruthbloch.app.n8n.cloud/webhook/recruitment-staffing";
+
+  // Default the date to today
+  document.getElementById('reporting_date').value = new Date().toISOString().slice(0,10);
+
+  // Load live staffing panel
+  function renderStaffing(data){
+    var totals = data.totals || { filled:0, budgeted:0, vacancies:0 };
+    document.getElementById('totals').innerHTML =
+      '<div class="pill"><div class="n">' + totals.filled + '</div><div class="l">Staff in post</div></div>' +
+      '<div class="pill"><div class="n">' + totals.vacancies + '</div><div class="l">Open vacancies</div></div>' +
+      '<div class="pill"><div class="n">' + totals.budgeted + '</div><div class="l">Budgeted posts</div></div>';
+    var homes = data.homes || [];
+    document.getElementById('homes').innerHTML = homes.map(function(h){
+      var cls = (h.vacancies === 0) ? 'zero' : 'some';
+      return '<div class="home"><div><div class="name">' + h.home + '</div>' +
+             '<div class="meta">' + h.filled + ' of ' + h.budgeted + ' filled</div></div>' +
+             '<div class="vac ' + cls + '">' + h.vacancies + '<div class="meta" style="text-align:right">vac</div></div></div>';
+    }).join('');
+    if (data.updated) document.getElementById('stamp').textContent = 'Live from ClickUp/n8n · ' + new Date(data.updated).toLocaleString();
+  }
+  fetch(STAFFING_URL)
+    .then(function(r){ return r.json(); })
+    .then(renderStaffing)
+    .catch(function(){
+      document.getElementById('totals').innerHTML = '<span class="loading">Live staffing unavailable right now — you can still submit your report below.</span>';
+    });
+
+  // Number steppers
+  document.querySelectorAll('.num button').forEach(function(b){
+    b.addEventListener('click', function(){
+      var inp = document.getElementById(b.dataset.step);
+      var v = parseInt(inp.value || '0', 10) + parseInt(b.dataset.d, 10);
+      if (isNaN(v) || v < 0) v = 0;
+      inp.value = v;
+    });
+  });
+
+  // Repeatable joiner / leaver rows
+  var HOMES = ['Aurora','Lyra','Cygnus','Orion','Leo'];
+  function addEntry(listId, kind){
+    var list = document.getElementById(listId);
+    var empty = list.querySelector('.empty');
+    if (empty) empty.remove();
+    var row = document.createElement('div');
+    row.className = 'entry';
+    var opts = '<option value="">Home…</option>' + HOMES.map(function(h){ return '<option>' + h + '</option>'; }).join('');
+    row.innerHTML =
+      '<select class="entry-home">' + opts + '</select>' +
+      '<input type="text" class="entry-detail" placeholder="Name — role (e.g. Jane Doe — Support Worker)" />' +
+      '<button type="button" class="rm" title="Remove">×</button>';
+    row.querySelector('.rm').addEventListener('click', function(){
+      row.remove();
+      if (!list.querySelector('.entry')) showEmpty(listId, kind);
+    });
+    list.appendChild(row);
+    row.querySelector('.entry-home').focus();
+  }
+  function showEmpty(listId, kind){
+    var list = document.getElementById(listId);
+    if (list.querySelector('.empty')) return;
+    var e = document.createElement('div');
+    e.className = 'empty';
+    e.textContent = 'No ' + kind + ' added — nobody ' + (kind === 'joiners' ? 'joined' : 'left') + ' today.';
+    list.appendChild(e);
+  }
+  showEmpty('joiners_list','joiners');
+  showEmpty('leavers_list','leavers');
+  document.getElementById('add_joiner').addEventListener('click', function(){ addEntry('joiners_list','joiners'); });
+  document.getElementById('add_leaver').addEventListener('click', function(){ addEntry('leavers_list','leavers'); });
+
+  function collectEntries(listId){
+    return Array.prototype.slice.call(document.querySelectorAll('#' + listId + ' .entry')).map(function(e){
+      return { home: e.querySelector('.entry-home').value, detail: e.querySelector('.entry-detail').value.trim() };
+    }).filter(function(x){ return x.home || x.detail; });
+  }
+
+  // Setback chips
+  document.querySelectorAll('.chip').forEach(function(c){
+    c.addEventListener('click', function(){ c.classList.toggle('on'); });
+  });
+
+  function selectedFlags(){
+    return Array.prototype.slice.call(document.querySelectorAll('.chip.on')).map(function(c){ return c.dataset.flag; });
+  }
+
+  var form = document.getElementById('form');
+  var errBox = document.getElementById('err');
+  var btn = document.getElementById('submitBtn');
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    errBox.style.display = 'none';
+
+    var recruiter = document.getElementById('recruiter').value.trim();
+    var date = document.getElementById('reporting_date').value;
+    var plan = document.getElementById('plan_tomorrow').value.trim();
+    if (!recruiter || !date || !plan){
+      errBox.textContent = 'Please fill in your name, the date, and the plan for tomorrow.';
+      errBox.style.display = 'block';
+      window.scrollTo({top:0, behavior:'smooth'});
+      return;
+    }
+
+    var n = function(id){ var v = parseInt(document.getElementById(id).value || '0', 10); return isNaN(v) ? 0 : v; };
+    var payload = {
+      reporting_date: date,
+      recruiter: recruiter,
+      calls: n('calls'),
+      cvs: n('cvs'),
+      screenings: n('screenings'),
+      interviews: n('interviews'),
+      joiners: collectEntries('joiners_list'),
+      leavers: collectEntries('leavers_list'),
+      pipeline_count: n('pipeline_count'),
+      near_offer_count: n('near_offer_count'),
+      setback_flags: selectedFlags(),
+      setbacks_notes: document.getElementById('setbacks_notes').value.trim(),
+      plan_tomorrow: plan
+    };
+
+    btn.disabled = true; btn.textContent = 'Submitting…';
+    fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(r){
+      if (!r.ok) throw new Error('Status ' + r.status);
+      form.style.display = 'none';
+      document.getElementById('done').style.display = 'block';
+      window.scrollTo({top:0, behavior:'smooth'});
+    })
+    .catch(function(){
+      errBox.textContent = 'Something went wrong sending the report. Check your connection and try again — if it keeps failing, tell Addy.';
+      errBox.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Submit report';
+    });
+  });
+</script>
+</body>
+</html>
