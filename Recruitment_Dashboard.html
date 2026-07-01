@@ -3,45 +3,44 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Recruitment & Staffing Dashboard</title>
+<title>Recruitment Report</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
 <style>
-  :root{
-    --bg:#0e1726; --panel:#15233c; --panel2:#1b2c49; --ink:#eaf0fb; --muted:#9fb1d0;
-    --line:rgba(255,255,255,.08); --accent:#4f8cff; --good:#34d399; --warn:#fbbf24; --bad:#f87171;
-    --radius:16px;
-  }
+  :root{--bg:#0e1726;--panel:#15233c;--ink:#eaf0fb;--muted:#9fb1d0;--line:rgba(255,255,255,.08);--accent:#4f8cff;--good:#34d399;--warn:#fbbf24;--bad:#f87171;--radius:16px}
   *{box-sizing:border-box}
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    background:radial-gradient(1200px 600px at 20% -10%, #1b2c49 0%, #0e1726 55%);color:var(--ink);min-height:100vh}
-  .wrap{max-width:1100px;margin:0 auto;padding:28px 20px 60px}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:radial-gradient(1200px 600px at 20% -10%,#1b2c49 0%,#0e1726 55%);color:var(--ink);min-height:100vh}
+  .wrap{max-width:1120px;margin:0 auto;padding:28px 20px 60px}
   .top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:22px}
   h1{font-size:26px;margin:0 0 4px}
   .sub{color:var(--muted);font-size:14px;margin:0}
   .btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer}
-  .btn:active{transform:translateY(1px)}
   .stamp{color:var(--muted);font-size:12px;margin-top:6px}
-  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px}
-  @media (max-width:820px){.kpis{grid-template-columns:repeat(2,1fr)}}
-  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
-  .kpi .n{font-size:30px;font-weight:800;line-height:1}
-  .kpi .l{font-size:12px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.05em}
-  .kpi .bar{height:6px;border-radius:6px;background:rgba(255,255,255,.08);margin-top:10px;overflow:hidden}
-  .kpi .bar span{display:block;height:100%;background:var(--good)}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
-  @media (max-width:820px){.grid{grid-template-columns:1fr}}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  .section-label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:22px 2px 10px}
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+  @media (max-width:900px){.kpis{grid-template-columns:repeat(3,1fr)}}
+  @media (max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:15px}
+  .kpi .n{font-size:28px;font-weight:800;line-height:1}
+  .kpi .l{font-size:11px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.04em}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px}
   .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 14px}
-  .chartbox{position:relative;height:300px}
+  .chartbox{position:relative;height:290px}
   .full{grid-column:1 / -1}
   table{width:100%;border-collapse:collapse;font-size:14px}
-  th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line)}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}
   th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
   td.num{text-align:center;font-variant-numeric:tabular-nums}
   .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700}
   .pill.zero{background:rgba(52,211,153,.15);color:var(--good)}
   .pill.some{background:rgba(251,191,36,.15);color:var(--warn)}
   .roletag{display:inline-block;background:rgba(79,140,255,.16);color:#bcd3ff;border-radius:6px;padding:2px 7px;font-size:12px;margin:2px 3px 0 0}
+  .narrative{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:700px){.narrative{grid-template-columns:1fr}}
+  .narrative h3{font-size:13px;color:var(--muted);margin:0 0 6px;text-transform:uppercase;letter-spacing:.05em}
+  .narrative .body{white-space:pre-wrap;font-size:14px;color:var(--ink);background:rgba(255,255,255,.04);border-radius:10px;padding:12px;min-height:60px}
+  .meta{color:var(--muted);font-size:13px;margin-bottom:12px}
   .loading{color:var(--muted);padding:40px;text-align:center}
   .err{color:var(--bad)}
 </style>
@@ -50,142 +49,150 @@
 <div class="wrap">
   <div class="top">
     <div>
-      <h1>Recruitment & Staffing Dashboard</h1>
-      <p class="sub">Heart &amp; Home Living — live across all homes</p>
+      <h1>Recruitment Report</h1>
+      <p class="sub">Heart &amp; Home Living — live recruitment &amp; staffing</p>
       <div class="stamp" id="stamp"></div>
     </div>
     <button class="btn" id="refresh">↻ Refresh</button>
   </div>
-
   <div id="content"><div class="loading">Loading live data…</div></div>
 </div>
 
 <script>
   const STAFFING_URL = "https://ruthbloch.app.n8n.cloud/webhook/recruitment-staffing";
+  const ACTIVITY_URL = "https://ruthbloch.app.n8n.cloud/webhook/recruitment-activity";
   const ROLE_ORDER = ['Support Worker','Senior Support Worker','Waking Night Support Worker','Team Leader','Deputy Manager','Registered Manager'];
   var charts = {};
+  function destroy(id){ if(charts[id]){ charts[id].destroy(); } }
 
-  function el(tag, cls, html){ var e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; return e; }
+  function render(staff, act){
+    var homes = staff.homes || [];
+    var st = staff.totals || { filled:0, budgeted:0, vacancies:0 };
+    var at = act.totals || { calls:0, cvs:0, screenings:0, interviews:0 };
+    var reports = act.reports || [];
+    var latest = act.latest || null;
+    var pipelineNow = latest ? latest.pipeline : 0;
 
-  function render(data){
-    var homes = data.homes || [];
-    var t = data.totals || { filled:0, budgeted:0, vacancies:0 };
-    var maxTotal = homes.reduce(function(s,h){return s+(h.max_placements||0);},0);
-    var placedTotal = homes.reduce(function(s,h){return s+(h.current_placements||0);},0);
-    var requiredTotal = homes.reduce(function(s,h){return s+(h.required_staff||0);},0);
-    var occPct = maxTotal? Math.round(placedTotal/maxTotal*100):0;
-
-    var content = document.getElementById('content');
-    content.innerHTML =
+    document.getElementById('content').innerHTML =
+      '<div class="section-label">This week — activity</div>' +
       '<div class="kpis">' +
-        kpi(t.filled, 'Staff in post') +
-        kpi(t.vacancies, 'Open vacancies') +
-        kpi(t.budgeted, 'Budgeted posts') +
-        kpi(requiredTotal, 'Required (calc)') +
-        kpi(occPct + '%', 'Occupancy', occPct) +
+        kpi(at.calls,'Calls') + kpi(at.cvs,'CVs sourced') + kpi(at.screenings,'Screenings') +
+        kpi(at.interviews,'Interviews') + kpi(pipelineNow,'Pipeline now') + kpi(st.vacancies,'Open vacancies') +
       '</div>' +
+      '<div class="section-label">Recruitment activity</div>' +
       '<div class="grid">' +
+        '<div class="card"><h2>Activity trend</h2><div class="chartbox"><canvas id="c_act"></canvas></div></div>' +
+        '<div class="card"><h2>Pipeline trend</h2><div class="chartbox"><canvas id="c_pipe"></canvas></div></div>' +
+      '</div>' +
+      '<div class="card"><h2>Latest end-of-day report</h2><div id="narr"></div></div>' +
+      '<div class="section-label">Staffing &amp; vacancies</div>' +
+      '<div class="kpis" style="grid-template-columns:repeat(4,1fr)">' +
+        kpi(st.filled,'Staff in post') + kpi(st.budgeted,'Budgeted posts') +
+        kpi(homes.reduce(function(s,h){return s+(h.required_staff||0);},0),'Required (calc)') +
+        kpi(st.vacancies,'Open vacancies') +
+      '</div>' +
+      '<div class="grid" style="margin-top:16px">' +
         '<div class="card"><h2>Staffing by home</h2><div class="chartbox"><canvas id="c_staff"></canvas></div></div>' +
         '<div class="card"><h2>Open vacancies by role</h2><div class="chartbox"><canvas id="c_roles"></canvas></div></div>' +
-        '<div class="card full"><h2>Occupancy — children placed vs capacity</h2><div class="chartbox"><canvas id="c_occ"></canvas></div></div>' +
-        '<div class="card full"><h2>Detail by home</h2><div id="tablebox"></div></div>' +
-      '</div>';
+      '</div>' +
+      '<div class="card"><h2>Detail by home</h2><div id="tablebox"></div></div>';
 
+    buildNarrative(latest);
     buildTable(homes);
+    buildActivityChart(reports);
+    buildPipelineChart(reports);
     buildStaffChart(homes);
     buildRolesChart(homes);
-    buildOccChart(homes);
 
-    document.getElementById('stamp').textContent = 'Live from ClickUp / n8n · updated ' + (data.updated ? new Date(data.updated).toLocaleString() : new Date().toLocaleString());
+    document.getElementById('stamp').textContent = 'Live from ClickUp / n8n · updated ' + new Date().toLocaleString();
   }
 
-  function kpi(n, label, pct){
-    var bar = (pct!=null) ? '<div class="bar"><span style="width:'+pct+'%"></span></div>' : '';
-    return '<div class="kpi"><div class="n">'+n+'</div><div class="l">'+label+'</div>'+bar+'</div>';
+  function kpi(n,label){ return '<div class="kpi"><div class="n">'+n+'</div><div class="l">'+label+'</div></div>'; }
+
+  function buildNarrative(latest){
+    var box = document.getElementById('narr');
+    if(!latest){ box.innerHTML = '<div class="loading">No reports submitted yet.</div>'; return; }
+    box.innerHTML =
+      '<div class="meta">'+ (latest.date||'') + (latest.recruiter? ' · '+latest.recruiter : '') +'</div>' +
+      '<div class="narrative">' +
+        '<div><h3>Setbacks</h3><div class="body">'+ (latest.setbacks || 'None reported') +'</div></div>' +
+        '<div><h3>Plan for tomorrow</h3><div class="body">'+ (latest.plan || '—') +'</div></div>' +
+      '</div>';
   }
 
   function buildTable(homes){
     var rows = homes.map(function(h){
       var roles = h.vacancy_roles||[];
       var vacCls = (h.vacancies===0)?'zero':'some';
-      var roleTags = roles.length ? roles.map(function(r){return '<span class="roletag">'+r+'</span>';}).join('') : '<span style="color:var(--muted)">—</span>';
-      return '<tr>'+
-        '<td><b>'+h.home+'</b></td>'+
-        '<td class="num">'+(h.current_placements||0)+' / '+(h.max_placements||0)+'</td>'+
-        '<td class="num">'+h.filled+'</td>'+
-        '<td class="num">'+h.budgeted+'</td>'+
-        '<td class="num">'+(h.required_staff||0)+'</td>'+
-        '<td class="num"><span class="pill '+vacCls+'">'+h.vacancies+'</span></td>'+
-        '<td>'+roleTags+'</td>'+
-      '</tr>';
+      var rc = {}; roles.forEach(function(r){ rc[r]=(rc[r]||0)+1; });
+      var disp = Object.keys(rc).map(function(r){ return rc[r]>1 ? r+' ('+rc[r]+')' : r; });
+      var roleTags = disp.length ? disp.map(function(r){return '<span class="roletag">'+r+'</span>';}).join('') : '<span style="color:var(--muted)">—</span>';
+      return '<tr><td><b>'+h.home+'</b></td><td class="num">'+(h.current_placements||0)+' / '+(h.max_placements||0)+'</td><td class="num">'+h.filled+'</td><td class="num">'+h.budgeted+'</td><td class="num">'+(h.required_staff||0)+'</td><td class="num"><span class="pill '+vacCls+'">'+h.vacancies+'</span></td><td>'+roleTags+'</td></tr>';
     }).join('');
-    document.getElementById('tablebox').innerHTML =
-      '<table><thead><tr><th>Home</th><th class="num">Placed / Max</th><th class="num">In post</th><th class="num">Budgeted</th><th class="num">Required</th><th class="num">Vac</th><th>Open roles</th></tr></thead><tbody>'+rows+'</tbody></table>';
+    document.getElementById('tablebox').innerHTML = '<table><thead><tr><th>Home</th><th class="num">Placed / Max</th><th class="num">In post</th><th class="num">Budgeted</th><th class="num">Required</th><th class="num">Vac</th><th>Open roles</th></tr></thead><tbody>'+rows+'</tbody></table>';
   }
 
-  function destroy(id){ if(charts[id]){ charts[id].destroy(); } }
+  function lastN(reports,n){ return reports.slice(Math.max(0,reports.length-n)); }
+  var LINEOPTS = { responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#cdd9ef'}}}, scales:{ x:{ticks:{color:'#9fb1d0'},grid:{display:false}}, y:{ticks:{color:'#9fb1d0'},grid:{color:'rgba(255,255,255,.06)'},beginAtZero:true} } };
+
+  function buildActivityChart(reports){
+    destroy('c_act');
+    var r = lastN(reports,14);
+    var box = document.getElementById('c_act');
+    if(!r.length){ box.parentNode.innerHTML = '<div class="loading">No activity logged yet.</div>'; return; }
+    charts['c_act'] = new Chart(box, { type:'line',
+      data:{ labels:r.map(function(x){return x.date;}), datasets:[
+        {label:'Calls',data:r.map(function(x){return x.calls;}),borderColor:'#34d399',backgroundColor:'#34d399',tension:.3},
+        {label:'CVs',data:r.map(function(x){return x.cvs;}),borderColor:'#4f8cff',backgroundColor:'#4f8cff',tension:.3},
+        {label:'Screenings',data:r.map(function(x){return x.screenings;}),borderColor:'#fbbf24',backgroundColor:'#fbbf24',tension:.3},
+        {label:'Interviews',data:r.map(function(x){return x.interviews;}),borderColor:'#a78bfa',backgroundColor:'#a78bfa',tension:.3}
+      ]}, options:LINEOPTS });
+  }
+
+  function buildPipelineChart(reports){
+    destroy('c_pipe');
+    var r = lastN(reports,14);
+    var box = document.getElementById('c_pipe');
+    if(!r.length){ box.parentNode.innerHTML = '<div class="loading">No pipeline data yet.</div>'; return; }
+    charts['c_pipe'] = new Chart(box, { type:'line',
+      data:{ labels:r.map(function(x){return x.date;}), datasets:[
+        {label:'Pipeline',data:r.map(function(x){return x.pipeline;}),borderColor:'#4f8cff',backgroundColor:'rgba(79,140,255,.2)',fill:true,tension:.3},
+        {label:'At offer / DBS',data:r.map(function(x){return x.near_offer;}),borderColor:'#34d399',backgroundColor:'#34d399',tension:.3}
+      ]}, options:LINEOPTS });
+  }
 
   function buildStaffChart(homes){
     destroy('c_staff');
-    charts['c_staff'] = new Chart(document.getElementById('c_staff'), {
-      type:'bar',
-      data:{ labels: homes.map(function(h){return h.home;}),
-        datasets:[
-          {label:'In post', data:homes.map(function(h){return h.filled;}), backgroundColor:'#34d399'},
-          {label:'Budgeted', data:homes.map(function(h){return h.budgeted;}), backgroundColor:'#4f8cff'},
-          {label:'Required (calc)', data:homes.map(function(h){return h.required_staff||0;}), backgroundColor:'#fbbf24'}
-        ]},
-      options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{labels:{color:'#cdd9ef'}}},
-        scales:{ x:{ticks:{color:'#9fb1d0'},grid:{display:false}}, y:{ticks:{color:'#9fb1d0'},grid:{color:'rgba(255,255,255,.06)'},beginAtZero:true} } }
-    });
+    charts['c_staff'] = new Chart(document.getElementById('c_staff'), { type:'bar',
+      data:{ labels:homes.map(function(h){return h.home;}), datasets:[
+        {label:'In post',data:homes.map(function(h){return h.filled;}),backgroundColor:'#34d399'},
+        {label:'Budgeted',data:homes.map(function(h){return h.budgeted;}),backgroundColor:'#4f8cff'},
+        {label:'Required',data:homes.map(function(h){return h.required_staff||0;}),backgroundColor:'#fbbf24'}
+      ]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#cdd9ef'}}},scales:{x:{ticks:{color:'#9fb1d0'},grid:{display:false}},y:{ticks:{color:'#9fb1d0'},grid:{color:'rgba(255,255,255,.06)'},beginAtZero:true}}} });
   }
 
   function buildRolesChart(homes){
     destroy('c_roles');
-    var counts = {};
-    ROLE_ORDER.forEach(function(r){counts[r]=0;});
+    var counts = {}; ROLE_ORDER.forEach(function(r){counts[r]=0;});
     homes.forEach(function(h){ (h.vacancy_roles||[]).forEach(function(r){ counts[r]=(counts[r]||0)+1; }); });
     var labels = Object.keys(counts).filter(function(r){return counts[r]>0;});
     var box = document.getElementById('c_roles');
-    if(!labels.length){
-      box.parentNode.innerHTML = '<div class="loading">No open vacancies right now 🎉</div>';
-      return;
-    }
-    charts['c_roles'] = new Chart(box, {
-      type:'doughnut',
-      data:{ labels:labels, datasets:[{ data:labels.map(function(r){return counts[r];}),
-        backgroundColor:['#4f8cff','#34d399','#fbbf24','#f87171','#a78bfa','#22d3ee'] }]},
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{color:'#cdd9ef'}}} }
-    });
-  }
-
-  function buildOccChart(homes){
-    destroy('c_occ');
-    charts['c_occ'] = new Chart(document.getElementById('c_occ'), {
-      type:'bar',
-      data:{ labels: homes.map(function(h){return h.home;}),
-        datasets:[
-          {label:'Placed', data:homes.map(function(h){return h.current_placements||0;}), backgroundColor:'#4f8cff'},
-          {label:'Capacity', data:homes.map(function(h){return h.max_placements||0;}), backgroundColor:'rgba(255,255,255,.14)'}
-        ]},
-      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{labels:{color:'#cdd9ef'}}},
-        scales:{ x:{ticks:{color:'#9fb1d0'},grid:{color:'rgba(255,255,255,.06)'},beginAtZero:true}, y:{ticks:{color:'#9fb1d0'},grid:{display:false}} } }
-    });
+    if(!labels.length){ box.parentNode.innerHTML = '<div class="loading">No open vacancies right now 🎉</div>'; return; }
+    charts['c_roles'] = new Chart(box, { type:'doughnut',
+      data:{ labels:labels, datasets:[{data:labels.map(function(r){return counts[r];}),backgroundColor:['#4f8cff','#34d399','#fbbf24','#f87171','#a78bfa','#22d3ee']}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#cdd9ef'}}}} });
   }
 
   function load(){
-    document.getElementById('content').innerHTML = '<div class="loading">Loading live data…</div>';
-    fetch(STAFFING_URL + '?t=' + Date.now())
-      .then(function(r){ return r.json(); })
-      .then(render)
-      .catch(function(){
-        document.getElementById('content').innerHTML = '<div class="loading err">Could not load live data. Check the staffing API is active, then Refresh.</div>';
-      });
+    Promise.all([
+      fetch(STAFFING_URL+'?t='+Date.now()).then(function(r){return r.json();}),
+      fetch(ACTIVITY_URL+'?t='+Date.now()).then(function(r){return r.json();})
+    ]).then(function(res){ render(res[0], res[1]); })
+      .catch(function(){ document.getElementById('content').innerHTML = '<div class="loading err">Could not load live data. Check the APIs are active, then Refresh.</div>'; });
   }
   document.getElementById('refresh').addEventListener('click', load);
   load();
+  setInterval(load, 60000);
 </script>
 </body>
 </html>
