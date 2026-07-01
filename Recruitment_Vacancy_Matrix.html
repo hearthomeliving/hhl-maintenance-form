@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Open Vacancies — Matrix</title>
+<style>
+  :root{--bg:#0e1726;--panel:#15233c;--ink:#eaf0fb;--muted:#9fb1d0;--line:rgba(255,255,255,.10);--accent:#4f8cff;--good:#34d399;--warn:#fbbf24;--bad:#f87171}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:radial-gradient(1200px 600px at 20% -10%,#1b2c49 0%,#0e1726 55%);color:var(--ink);min-height:100vh}
+  .wrap{max-width:1000px;margin:0 auto;padding:24px 20px 48px}
+  .top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+  h1{font-size:22px;margin:0 0 3px}
+  .sub{color:var(--muted);font-size:13px;margin:0}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer}
+  .stamp{color:var(--muted);font-size:11px;margin-top:5px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
+  th,td{padding:11px 10px;border-bottom:1px solid var(--line);text-align:center}
+  th:first-child,td:first-child{text-align:left;font-weight:700;position:sticky;left:0;background:var(--panel)}
+  thead th{color:var(--muted);font-size:12px;font-weight:600;border-bottom:2px solid var(--line);vertical-align:bottom}
+  td.n{font-variant-numeric:tabular-nums;font-weight:700}
+  td.zero{color:#41506b}
+  td.some{color:var(--warn)}
+  .totcol,.totrow{background:rgba(79,140,255,.10)}
+  tr.total td{border-top:2px solid var(--line);font-weight:800}
+  .loading{padding:36px;text-align:center;color:var(--muted)}
+  .err{color:var(--bad)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Open Vacancies — Matrix</h1>
+      <p class="sub">Heart &amp; Home Living · homes × roles · live</p>
+      <div class="stamp" id="stamp"></div>
+    </div>
+    <button class="btn" id="refresh">↻ Refresh</button>
+  </div>
+  <div class="card"><div id="box"><div class="loading">Loading live data…</div></div></div>
+</div>
+
+<script>
+  const STAFFING_URL = "https://ruthbloch.app.n8n.cloud/webhook/recruitment-staffing";
+  const ROLES = ['Support Worker','Senior Support Worker','Waking Night Support Worker','Team Leader','Deputy Manager','Registered Manager'];
+  const SHORT = { 'Support Worker':'Support Worker','Senior Support Worker':'Sr Support Worker','Waking Night Support Worker':'Waking Night SW','Team Leader':'Team Leader','Deputy Manager':'Deputy Mgr','Registered Manager':'Registered Mgr' };
+
+  function render(data){
+    var homes = data.homes || [];
+    var head = '<tr><th>Home</th>' + ROLES.map(function(r){ return '<th title="'+r+'">'+(SHORT[r]||r)+'</th>'; }).join('') + '<th class="totcol">Total</th></tr>';
+    var colTot = {}; ROLES.forEach(function(r){ colTot[r]=0; }); var grand = 0;
+    var body = homes.map(function(h){
+      var rc = {}; (h.vacancy_roles||[]).forEach(function(x){ rc[x]=(rc[x]||0)+1; });
+      var tot = 0;
+      var cells = ROLES.map(function(r){ var n = rc[r]||0; tot += n; colTot[r]+=n; return '<td class="n '+(n?'some':'zero')+'">'+(n||'·')+'</td>'; }).join('');
+      grand += tot;
+      return '<tr><td>'+h.home+'</td>'+cells+'<td class="n totcol">'+tot+'</td></tr>';
+    }).join('');
+    var totRow = '<tr class="total"><td>Total</td>' + ROLES.map(function(r){ return '<td class="n totrow">'+(colTot[r]||0)+'</td>'; }).join('') + '<td class="n totcol totrow">'+grand+'</td></tr>';
+    document.getElementById('box').innerHTML = '<table><thead>'+head+'</thead><tbody>'+body+totRow+'</tbody></table>';
+    document.getElementById('stamp').textContent = 'Live · updated ' + (data.updated ? new Date(data.updated).toLocaleString() : new Date().toLocaleString());
+  }
+
+  function load(){
+    fetch(STAFFING_URL + '?t=' + Date.now())
+      .then(function(r){ return r.json(); })
+      .then(render)
+      .catch(function(){ document.getElementById('box').innerHTML = '<div class="loading err">Could not load live data. Try Refresh.</div>'; });
+  }
+  document.getElementById('refresh').addEventListener('click', load);
+  load();
+  setInterval(load, 60000);
+</script>
+</body>
+</html>
