@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Supervision Report</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
+<style>
+  :root{--bg:#0e1726;--panel:#15233c;--ink:#eaf0fb;--muted:#9fb1d0;--line:rgba(255,255,255,.08);--accent:#4f8cff;--good:#34d399;--warn:#fbbf24;--bad:#f87171;--radius:16px}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:radial-gradient(1200px 600px at 20% -10%,#1b2c49 0%,#0e1726 55%);color:var(--ink);min-height:100vh}
+  .wrap{max-width:1120px;margin:0 auto;padding:28px 20px 60px}
+  .top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:22px}
+  h1{font-size:26px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:14px;margin:0}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer}
+  .stamp{color:var(--muted);font-size:12px;margin-top:6px}
+  .section-label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:22px 2px 10px}
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+  @media (max-width:900px){.kpis{grid-template-columns:repeat(3,1fr)}}
+  @media (max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:15px}
+  .kpi .n{font-size:28px;font-weight:800;line-height:1}
+  .kpi .l{font-size:11px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.04em}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 14px}
+  .chartbox{position:relative;height:290px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  td.num,th.num{text-align:center;font-variant-numeric:tabular-nums}
+  tr.rowlink{cursor:pointer}
+  tr.rowlink:hover td{background:rgba(79,140,255,.08)}
+  tr.selected td{background:rgba(79,140,255,.14)}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700}
+  .pill.zero{background:rgba(52,211,153,.15);color:var(--good)}
+  .pill.some{background:rgba(251,191,36,.15);color:var(--warn)}
+  .pill.bad{background:rgba(248,113,113,.15);color:var(--bad)}
+  .tick{color:var(--good);font-weight:800}
+  .cross{color:var(--bad);font-weight:800}
+  .dash{color:var(--muted)}
+  .grid9{display:grid;grid-template-columns:130px repeat(3,1fr);gap:8px}
+  @media (max-width:760px){.grid9{grid-template-columns:90px repeat(3,1fr)}}
+  .axis9{display:flex;align-items:center;justify-content:center;text-align:center;font-size:11px;font-weight:700;color:var(--muted);padding:4px;text-transform:uppercase;letter-spacing:.04em}
+  .cell9{border-radius:12px;padding:12px;min-height:118px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+  .cell9 .t{font-weight:800;font-size:13px;margin-bottom:2px}
+  .cell9 .d{color:var(--muted);font-size:11px;margin-bottom:9px}
+  .cell9.star{background:rgba(52,211,153,.10);border-color:rgba(52,211,153,.35)}
+  .cell9.mid{background:rgba(79,140,255,.08);border-color:rgba(79,140,255,.28)}
+  .cell9.watch{background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.28)}
+  .cell9.risk{background:rgba(248,113,113,.10);border-color:rgba(248,113,113,.35)}
+  .chip{display:inline-block;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:4px 12px;margin:2px 4px 2px 0;font-weight:700;font-size:12.5px;cursor:pointer}
+  .chip:hover{background:rgba(79,140,255,.25)}
+  .chip.sel{background:var(--accent);border-color:var(--accent)}
+  .badge{display:inline-block;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:800;margin-right:6px}
+  .badge.yes{background:rgba(52,211,153,.16);color:var(--good)}
+  .badge.no{background:rgba(248,113,113,.16);color:var(--bad)}
+  .mchip{display:inline-block;border-radius:8px;padding:3px 9px;font-size:12px;font-weight:700;margin:2px 4px 2px 0}
+  .mchip.ok{background:rgba(52,211,153,.14);color:var(--good)}
+  .mchip.miss{background:rgba(248,113,113,.14);color:var(--bad)}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+  @media (max-width:700px){.detail-grid{grid-template-columns:1fr}}
+  .field h3{font-size:12px;color:var(--muted);margin:0 0 5px;text-transform:uppercase;letter-spacing:.05em}
+  .field .body{font-size:13.5px;background:rgba(255,255,255,.04);border-radius:10px;padding:10px;min-height:40px}
+  .meta{color:var(--muted);font-size:13px;margin-bottom:8px}
+  .loading{color:var(--muted);padding:40px;text-align:center}
+  .err{color:var(--bad)}
+  a{color:#bcd3ff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Supervision Report — Test Home</h1>
+      <p class="sub">Heart &amp; Home Living — supervision compliance, People Analyzer &amp; 9-box (SANDBOX)</p>
+      <div class="stamp" id="stamp"></div>
+    </div>
+    <button class="btn" id="refresh">&#8635; Refresh</button>
+  </div>
+  <div id="content"><div class="loading">Loading live data&hellip;</div></div>
+</div>
+
+<script>
+  var DATA_URL = "https://ruthbloch.app.n8n.cloud/webhook/supervision-data";
+  var MSHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var charts = {};
+  var DATA = null;
+  var selected = null;
+  function destroy(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function kpi(n,label){ return '<div class="kpi"><div class="n">'+n+'</div><div class="l">'+label+'</div></div>'; }
+
+  function lastFullMonth(){ var n = new Date(); var m = n.getMonth()-1; return m < 0 ? 0 : m; }
+
+  function staffModel(d){
+    var lf = lastFullMonth();
+    var map = {};
+    d.records.forEach(function(r){
+      if(!map[r.staff]) map[r.staff] = { name:r.staff, role:r.role, months:{}, latest:null };
+      map[r.staff].months[r.monthIndex] = r;
+      if(!map[r.staff].latest || r.monthIndex > map[r.staff].latest.monthIndex) map[r.staff].latest = r;
+    });
+    var list = Object.keys(map).map(function(k){
+      var s = map[k];
+      var idx = Object.keys(s.months).map(Number);
+      s.first = Math.min.apply(null, idx);
+      s.expected = lf - s.first + 1;
+      s.done = idx.length;
+      s.missed = [];
+      for(var i=s.first;i<=lf;i++){ if(!s.months[i]) s.missed.push(i); }
+      s.rate = s.expected > 0 ? Math.round(100*s.done/s.expected) : 0;
+      s.pa = (d.pa||[]).find(function(p){ return p.name === s.name; }) || null;
+      return s;
+    });
+    list.sort(function(a,b){ return a.name < b.name ? -1 : 1; });
+    return { list:list, lf:lf };
+  }
+
+  function boxOf(p){
+    var perf = p.total >= 20 ? 2 : (p.total >= 15 ? 1 : 0);
+    var pot = p.gwc === 3 ? 0 : (p.gwc === 2 ? 1 : 2);
+    return { perf:perf, pot:pot };
+  }
+
+  function render(d){
+    DATA = d;
+    var m = staffModel(d);
+    var totalExp = 0, totalDone = 0, totalMiss = 0;
+    m.list.forEach(function(s){ totalExp += s.expected; totalDone += s.done; totalMiss += s.missed.length; });
+    var avgCv = d.pa.length ? Math.round(10 * d.pa.reduce(function(a,p){return a+p.total;},0) / d.pa.length) / 10 : 0;
+    var risk = d.pa.filter(function(p){ var b = boxOf(p); return b.perf === 0 && b.pot === 2; }).length;
+
+    document.getElementById('content').innerHTML =
+      '<div class="section-label">Year to date &mdash; Jan to '+MSHORT[m.lf]+'</div>' +
+      '<div class="kpis">' +
+        kpi((totalExp?Math.round(100*totalDone/totalExp):0)+'%','YTD compliance') +
+        kpi(totalDone+' / '+totalExp,'Sessions done / due') +
+        kpi(totalMiss,'Missed sessions') +
+        kpi(m.list.length,'Staff supervised') +
+        kpi(avgCv,'Avg core values (25)') +
+        kpi(risk,'In risk box') +
+      '</div>' +
+      '<div class="section-label">Supervision compliance</div>' +
+      '<div class="grid">' +
+        '<div class="card"><h2>Monthly compliance %</h2><div class="chartbox"><canvas id="c_month"></canvas></div></div>' +
+        '<div class="card"><h2>Sessions by staff &mdash; done vs due</h2><div class="chartbox"><canvas id="c_staff"></canvas></div></div>' +
+      '</div>' +
+      '<div class="card"><h2>Compliance matrix &mdash; click a row for detail</h2><div id="matrixbox" style="overflow-x:auto"></div></div>' +
+      '<div class="section-label">People Analyzer &amp; 9-box</div>' +
+      '<div class="grid">' +
+        '<div class="card"><h2>Core values by staff (max 25)</h2><div class="chartbox"><canvas id="c_values"></canvas></div></div>' +
+        '<div class="card"><h2>GWC &mdash; Get it / Want it / Capacity</h2><div class="chartbox"><canvas id="c_gwc"></canvas></div></div>' +
+      '</div>' +
+      '<div class="card"><h2>9-box talent grid &mdash; click a name</h2><div class="grid9" id="ninebox"></div>' +
+        '<div class="meta" style="margin-top:10px">Performance = core values total (High &ge;20 &middot; Med 15&ndash;19 &middot; Low &lt;15). Potential = GWC yes-count (High 3 &middot; Med 2 &middot; Low 0&ndash;1).</div></div>' +
+      '<div class="card" id="detailcard"><h2>Staff detail</h2><div id="detailbox"><div class="loading">Click a name on the 9-box or a row in the matrix.</div></div></div>';
+
+    buildMatrix(m);
+    buildNineBox(d.pa);
+    buildMonthChart(m);
+    buildStaffChart(m);
+    buildValuesChart(d.pa);
+    buildGwcChart(d.pa);
+    if(selected) showDetail(selected, false);
+    document.getElementById('stamp').textContent = 'Live from ClickUp / n8n · updated ' + new Date().toLocaleString();
+  }
+
+  function buildMatrix(m){
+    var lf = m.lf;
+    var head = '<tr><th>Staff</th><th>Role</th>';
+    for(var i=0;i<=lf;i++) head += '<th class="num">'+MSHORT[i]+'</th>';
+    head += '<th class="num">Rate</th></tr>';
+    var body = m.list.map(function(s){
+      var cells = '';
+      for(var i=0;i<=lf;i++){
+        if(i < s.first) cells += '<td class="num dash">&mdash;</td>';
+        else if(s.months[i]) cells += '<td class="num tick">&#10003;</td>';
+        else cells += '<td class="num cross">&#10007;</td>';
+      }
+      var cls = s.rate === 100 ? 'zero' : (s.rate >= 80 ? 'some' : 'bad');
+      var sel = selected === s.name ? ' selected' : '';
+      return '<tr class="rowlink'+sel+'" onclick="showDetail(\''+esc(s.name)+'\')"><td><b>'+esc(s.name)+'</b></td><td style="color:var(--muted)">'+esc(s.role)+'</td>'+cells+'<td class="num"><span class="pill '+cls+'">'+s.rate+'%</span></td></tr>';
+    }).join('');
+    document.getElementById('matrixbox').innerHTML = '<table><thead>'+head+'</thead><tbody>'+body+'</tbody></table>';
+  }
+
+  var LBL9 = [['Enigma','Growth Talent','Star'],['Inconsistent','Core Player','High Performer'],['Risk','Effective Specialist','Trusted Professional']];
+  var DESC9 = [['Low perf, high potential','Developing well &mdash; invest','Top talent &mdash; retain &amp; stretch'],['Underperforming, some potential','Solid contributor','Strong delivery'],['Act &mdash; decision needed','Delivers, limited growth appetite','High delivery, prefers current role']];
+  var CLS9 = [['watch','mid','star'],['risk','watch','mid'],['risk','risk','watch']];
+  function buildNineBox(pa){
+    var rows = ['High potential (GWC 3)','Med potential (GWC 2)','Low potential (GWC 0-1)'];
+    var cols = ['Low performance (&lt;15)','Med performance (15-19)','High performance (&ge;20)'];
+    var html = '<div class="axis9"></div>';
+    cols.forEach(function(c){ html += '<div class="axis9">'+c+'</div>'; });
+    for(var r=0;r<3;r++){
+      html += '<div class="axis9">'+rows[r]+'</div>';
+      for(var c=0;c<3;c++){
+        var occ = pa.filter(function(p){ var b = boxOf(p); return b.pot === r && b.perf === c; });
+        var chips = occ.map(function(p){
+          var sel = selected === p.name ? ' sel' : '';
+          return '<span class="chip'+sel+'" onclick="showDetail(\''+esc(p.name)+'\')">'+esc(p.name)+' &middot; '+p.total+'</span>';
+        }).join('');
+        html += '<div class="cell9 '+CLS9[r][c]+'"><div class="t">'+LBL9[r][c]+'</div><div class="d">'+DESC9[r][c]+'</div>'+chips+'</div>';
+      }
+    }
+    document.getElementById('ninebox').innerHTML = html;
+  }
+
+  function showDetail(name, scroll){
+    selected = name;
+    var m = staffModel(DATA);
+    var s = m.list.find(function(x){ return x.name === name; });
+    if(!s){ return; }
+    var p = s.pa;
+    var html = '<div class="meta"><b style="color:var(--ink);font-size:16px">'+esc(s.name)+'</b> &middot; '+esc(s.role)+'</div>';
+    if(p){
+      html += '<div style="margin:8px 0 4px">' +
+        '<span class="badge '+(p.getIt?'yes':'no')+'">Get it: '+(p.getIt?'Yes':'No')+'</span>' +
+        '<span class="badge '+(p.wantIt?'yes':'no')+'">Want it: '+(p.wantIt?'Yes':'No')+'</span>' +
+        '<span class="badge '+(p.capacity?'yes':'no')+'">Capacity: '+(p.capacity?'Yes':'No')+'</span>' +
+        '<span class="badge" style="background:rgba(79,140,255,.16);color:#bcd3ff">Core values: '+p.total+' / 25</span></div>';
+      if(p.notes) html += '<div class="meta" style="font-style:italic">'+esc(p.notes)+'</div>';
+    }
+    html += '<div style="margin:10px 0 4px">';
+    for(var i=s.first;i<=m.lf;i++){
+      html += s.months[i] ? '<span class="mchip ok">'+MSHORT[i]+' &#10003;</span>' : '<span class="mchip miss">'+MSHORT[i]+' &#10007;</span>';
+    }
+    html += '</div>';
+    var L = s.latest;
+    if(L){
+      html += '<div class="meta" style="margin-top:12px">Latest supervision: <b style="color:var(--ink)">'+esc(L.month)+'</b> ('+esc(L.date)+') &middot; supervisor '+esc(L.supervisor)+' &middot; <a href="'+esc(L.url)+'" target="_blank">open in ClickUp</a></div>' +
+      '<div class="detail-grid">' +
+        '<div class="field"><h3>Check-in / wellbeing</h3><div class="body">'+esc(L.wellbeing)+'</div></div>' +
+        '<div class="field"><h3>Work &amp; performance</h3><div class="body">'+esc(L.performance)+'</div></div>' +
+        '<div class="field"><h3>Safeguarding</h3><div class="body">'+esc(L.safeguarding)+'</div></div>' +
+        '<div class="field"><h3>Young people</h3><div class="body">'+esc(L.yp)+'</div></div>' +
+        '<div class="field"><h3>Actions agreed</h3><div class="body">'+esc(L.actions)+'</div></div>' +
+        '<div class="field"><h3>Previous actions completed</h3><div class="body">'+esc(L.prev)+'</div></div>' +
+      '</div>';
+    }
+    document.getElementById('detailbox').innerHTML = html;
+    buildMatrix(m);
+    buildNineBox(DATA.pa);
+    if(scroll !== false) document.getElementById('detailcard').scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+
+  var AXIS = { x:{ticks:{color:'#9fb1d0'},grid:{display:false}}, y:{ticks:{color:'#9fb1d0'},grid:{color:'rgba(255,255,255,.06)'},beginAtZero:true} };
+
+  function buildMonthChart(m){
+    destroy('c_month');
+    var labels = [], data = [];
+    for(var i=0;i<=m.lf;i++){
+      var due = 0, done = 0;
+      m.list.forEach(function(s){ if(i >= s.first){ due++; if(s.months[i]) done++; } });
+      labels.push(MSHORT[i]);
+      data.push(due ? Math.round(100*done/due) : 0);
+    }
+    charts['c_month'] = new Chart(document.getElementById('c_month'), { type:'bar',
+      data:{ labels:labels, datasets:[{ label:'Compliance %', data:data,
+        backgroundColor:data.map(function(v){ return v===100 ? 'rgba(52,211,153,.7)' : (v>=80 ? 'rgba(251,191,36,.7)' : 'rgba(248,113,113,.7)'); }),
+        borderRadius:6 }]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+        scales:{ x:AXIS.x, y:{ticks:{color:'#9fb1d0'},grid:{color:'rgba(255,255,255,.06)'},beginAtZero:true,max:100} } } });
+  }
+
+  function buildStaffChart(m){
+    destroy('c_staff');
+    charts['c_staff'] = new Chart(document.getElementById('c_staff'), { type:'bar',
+      data:{ labels:m.list.map(function(s){return s.name.split(' ')[0];}), datasets:[
+        { label:'Done', data:m.list.map(function(s){return s.done;}), backgroundColor:'#34d399', borderRadius:5 },
+        { label:'Due', data:m.list.map(function(s){return s.expected;}), backgroundColor:'rgba(79,140,255,.55)', borderRadius:5 }
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#cdd9ef'}}}, scales:AXIS } });
+  }
+
+  function buildValuesChart(pa){
+    destroy('c_values');
+    var sorted = pa.slice().sort(function(a,b){ return b.total - a.total; });
+    charts['c_values'] = new Chart(document.getElementById('c_values'), { type:'bar',
+      data:{ labels:sorted.map(function(p){return p.name.split(' ')[0];}), datasets:[{ label:'Core values', data:sorted.map(function(p){return p.total;}),
+        backgroundColor:sorted.map(function(p){ return p.total>=20 ? 'rgba(52,211,153,.75)' : (p.total>=15 ? 'rgba(79,140,255,.7)' : 'rgba(248,113,113,.7)'); }), borderRadius:6 }]},
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+        scales:{ x:{ticks:{color:'#9fb1d0'},grid:{color:'rgba(255,255,255,.06)'},beginAtZero:true,max:25}, y:{ticks:{color:'#cdd9ef'},grid:{display:false}} } } });
+  }
+
+  function buildGwcChart(pa){
+    destroy('c_gwc');
+    var counts = [0,0,0];
+    pa.forEach(function(p){ if(p.gwc===3) counts[0]++; else if(p.gwc===2) counts[1]++; else counts[2]++; });
+    charts['c_gwc'] = new Chart(document.getElementById('c_gwc'), { type:'doughnut',
+      data:{ labels:['All three (GWC 3)','Two of three','One or none'], datasets:[{ data:counts, backgroundColor:['#34d399','#4f8cff','#f87171'] }]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{color:'#cdd9ef'}}} } });
+  }
+
+  function load(){
+    fetch(DATA_URL + '?t=' + Date.now()).then(function(r){ return r.json(); })
+      .then(function(d){ render(d); })
+      .catch(function(){ document.getElementById('content').innerHTML = '<div class="loading err">Could not load live data. Check the Supervision Data API is active, then Refresh.</div>'; });
+  }
+  document.getElementById('refresh').addEventListener('click', load);
+  window.showDetail = showDetail;
+  load();
+  setInterval(load, 60000);
+</script>
+</body>
+</html>
