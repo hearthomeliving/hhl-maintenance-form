@@ -50,6 +50,7 @@
   .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
   .dot.moving { background: var(--green); } .dot.parked { background: var(--blue); }
   .dot.stale { background: var(--amber); } .dot.verystale { background: var(--red); }
+  .swatch { display: inline-block; width: 13px; height: 13px; border-radius: 4px; border: 1px solid #94a3b8; flex: none; }
   #loadmsg { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
   #loadmsg.error { color: var(--red); }
 </style>
@@ -82,6 +83,20 @@ let markerLayer = L.layerGroup().addTo(map);
 function render(payload) {
   const vehicles = payload.vehicles || [];
   const now = new Date();
+  const colourMap = { white:'#f8fafc', yellow:'#facc15', grey:'#9ca3af', gray:'#9ca3af', blue:'#3b82f6', silver:'#cbd5e1', red:'#ef4444', black:'#1f2937', green:'#22c55e', orange:'#f97316' };
+  function swatchHtml(c) {
+    if (!c || !c.colour) return '';
+    const col = colourMap[String(c.colour).toLowerCase()] || '#9ca3af';
+    return '<span class="swatch" style="background:' + col + '" title="' + c.colour + '"></span>';
+  }
+  function carDesc(c) {
+    if (!c || !c.make) return '';
+    return (c.make + ' ' + (c.model || '')).trim() + (c.colour ? ' \u00b7 ' + c.colour : '');
+  }
+  function formatReg(r) {
+    const x = String(r || '').toUpperCase();
+    return x.length === 7 ? x.slice(0, 4) + ' ' + x.slice(4) : x;
+  }
 
   function classify(v) {
     const pos = new Date((v.PositionTime || '').replace(' ', 'T'));
@@ -134,6 +149,7 @@ function render(payload) {
     h += '<div class="row"><span class="label">Next service</span>' + dueCell(c.nextServiceDue) + '</div>';
     h += '<div class="row"><span class="label">Insurance</span>' + dueCell(c.insuranceExpiry) + '</div>';
     h += '<div class="row"><span class="label">Breakdown cover</span>' + dueCell(c.breakdownExpiry) + '</div>';
+    h += '<div class="row"><span class="label">Road tax due</span>' + dueCell(c.taxDueDate) + '</div>';
     if (c.motOdometer) h += '<div class="row"><span class="label">Mileage at last MOT</span><span>' + Number(c.motOdometer).toLocaleString() + ' mi</span></div>';
     if (c.hasOutstandingRecall === 'true') h += '<div class="recall">⚠ OUTSTANDING SAFETY RECALL</div>';
     if (c.motAdvisories) h += '<div class="advisories">Advisories: ' + c.motAdvisories + '</div>';
@@ -153,7 +169,7 @@ function render(payload) {
     const mk = L.circleMarker([v.Lat, v.Lon], {
       radius: 9, color: '#fff', weight: 2, fillColor: colors[cls], fillOpacity: 0.95
     }).addTo(markerLayer);
-    let pop = '<b>' + ((v.compliance && v.compliance.vehicleName) || v.Registration) + '</b><br>' + labels[cls] +
+    let pop = '<b>' + (v.compliance ? formatReg(v.compliance.reg) : v.Registration) + '</b>' + (carDesc(v.compliance) ? '<br>' + carDesc(v.compliance) : '') + '<br>' + labels[cls] +
       ' · ' + (v.SpeedKPH || 0) + ' km/h<br>Battery: ' + (v.BatteryLevel || '?') +
       '<br>Position: ' + ago(v.PositionTime);
     if (v.compliance && v.compliance.motExpiry) pop += '<br>MOT: ' + String(v.compliance.motExpiry).slice(0,10);
@@ -174,13 +190,15 @@ function render(payload) {
     const cc = compClass(v.compliance);
     if (cc === 'comp-warn' || cc === 'comp-bad') compCount++;
     const compLabel = v.compliance ? (v.compliance.complianceStatus || 'NO DATA') : 'NOT IN REGISTRY';
-    const displayName = (v.compliance && v.compliance.vehicleName) ? v.compliance.vehicleName : v.Registration;
+    const displayName = v.compliance ? formatReg(v.compliance.reg) : v.Registration;
+    const desc = carDesc(v.compliance);
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML =
-      '<div class="card-top"><span class="dot ' + cls + '"></span><span class="reg">' + displayName + '</span>' +
+      '<div class="card-top"><span class="dot ' + cls + '"></span><span class="reg">' + displayName + '</span>' + swatchHtml(v.compliance) +
       '<span class="pill ' + cls + '">' + labels[cls] + '</span>' +
       '<span class="pill ' + cc + '">' + compLabel + '</span></div>' +
+      (desc ? '<div class="row"><span class="label">Vehicle</span><span>' + desc + '</span></div>' : '') +
       '<div class="row"><span class="label">Speed</span><span>' + (v.SpeedKPH || 0) + ' km/h</span></div>' +
       '<div class="row"><span class="label">Battery</span><span class="' + (battWarn(v) ? 'warn' : '') + '">' + (v.BatteryLevel || '?') + (battWarn(v) ? ' ⚠ low' : '') + '</span></div>' +
       '<div class="row"><span class="label">GPS position</span><span>' + ago(v.PositionTime) + '</span></div>' +
@@ -199,9 +217,10 @@ function render(payload) {
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML =
-      '<div class="card-top"><span class="reg">' + (c.vehicleName || c.reg) + '</span>' +
+      '<div class="card-top"><span class="reg">' + formatReg(c.reg) + '</span>' + swatchHtml(c) +
       '<span class="pill parked">NO TRACKER</span>' +
       '<span class="pill ' + cc + '">' + (c.complianceStatus || 'NO DATA') + '</span></div>' +
+      (carDesc(c) ? '<div class="row"><span class="label">Vehicle</span><span>' + carDesc(c) + '</span></div>' : '') +
       compHtml(c);
     cardsEl.appendChild(card);
   });
