@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HHL Fleet Dashboard (Sandbox)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg: #f4f6f9; --card: #ffffff; --ink: #1f2733; --muted: #6b7686;
+    --green: #16a34a; --amber: #d97706; --red: #dc2626; --blue: #2563eb;
+    --border: #e3e8ef;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); }
+  header { background: #101828; color: #fff; padding: 14px 22px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  header h1 { font-size: 17px; font-weight: 600; }
+  .badge-sandbox { background: var(--amber); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; letter-spacing: .5px; }
+  .header-stats { margin-left: auto; display: flex; gap: 18px; font-size: 12.5px; color: #cbd5e1; flex-wrap: wrap; }
+  .header-stats b { color: #fff; }
+  .header-stats b.alert { color: #fca5a5; }
+  #map { height: 42vh; min-height: 300px; width: 100%; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px; padding: 16px 20px 10px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(16,24,40,.05); cursor: pointer; transition: box-shadow .15s; }
+  .card:hover { box-shadow: 0 4px 12px rgba(16,24,40,.12); }
+  .card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .reg { font-weight: 700; font-size: 15px; }
+  .pill { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: auto; white-space: nowrap; }
+  .pill.moving { background: #dcfce7; color: var(--green); }
+  .pill.parked { background: #e8edf4; color: var(--muted); }
+  .pill.stale { background: #fef3c7; color: var(--amber); }
+  .pill.verystale { background: #fee2e2; color: var(--red); }
+  .pill.comp-ok { background: #dcfce7; color: var(--green); margin-left: 0; }
+  .pill.comp-warn { background: #fef3c7; color: var(--amber); margin-left: 0; }
+  .pill.comp-bad { background: #fee2e2; color: var(--red); margin-left: 0; }
+  .pill.comp-none { background: #e8edf4; color: var(--muted); margin-left: 0; }
+  .row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+  .row .label { color: var(--muted); }
+  .addr { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.45; border-top: 1px dashed var(--border); padding-top: 8px; }
+  .comp { margin-top: 9px; border-top: 2px solid var(--border); padding-top: 8px; }
+  .comp-title { font-size: 10.5px; font-weight: 700; color: var(--muted); letter-spacing: .6px; margin-bottom: 4px; }
+  .due-ok { color: var(--green); font-weight: 600; }
+  .due-warn { color: var(--amber); font-weight: 700; }
+  .due-bad { color: var(--red); font-weight: 700; }
+  .warn { color: var(--red); font-weight: 600; }
+  .recall { background: #fee2e2; color: var(--red); font-size: 11.5px; font-weight: 700; padding: 4px 8px; border-radius: 6px; margin-top: 7px; display: inline-block; }
+  .advisories { font-size: 11.5px; color: var(--amber); margin-top: 5px; line-height: 1.4; }
+  footer { text-align: center; font-size: 11.5px; color: var(--muted); padding: 8px 0 22px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
+  .dot.moving { background: var(--green); } .dot.parked { background: var(--blue); }
+  .dot.stale { background: var(--amber); } .dot.verystale { background: var(--red); }
+  #loadmsg { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
+  #loadmsg.error { color: var(--red); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Heart &amp; Home Living — Fleet Live Dashboard</h1>
+  <span class="badge-sandbox">SANDBOX</span>
+  <div class="header-stats">
+    <span>Vehicles: <b id="stat-total">–</b></span>
+    <span>Moving: <b id="stat-moving">–</b></span>
+    <span>Stale GPS: <b id="stat-stale">–</b></span>
+    <span>Compliance alerts: <b id="stat-comp">–</b></span>
+    <span>Refreshed: <b id="stat-time">–</b></span>
+  </div>
+</header>
+<div id="map"></div>
+<div id="loadmsg">Loading live fleet data…</div>
+<div class="grid" id="cards"></div>
+<footer>Data: TrackIt247 + DVSA + compliance registry · Auto-refreshes every 5 minutes · Positions older than 3h flagged stale</footer>
+<script>
+const DATA_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-data';
+
+const map = L.map('map').setView([52.5, -1.0], 7);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+let markerLayer = L.layerGroup().addTo(map);
+
+function render(payload) {
+  const vehicles = payload.vehicles || [];
+  const now = new Date();
+
+  function classify(v) {
+    const pos = new Date((v.PositionTime || '').replace(' ', 'T'));
+    const ageH = (now - pos) / 36e5;
+    if (isNaN(ageH) || ageH > 24) return 'verystale';
+    if (ageH > 3) return 'stale';
+    return (v.SpeedKPH || 0) > 3 ? 'moving' : 'parked';
+  }
+  function ago(ts) {
+    if (!ts) return 'unknown';
+    const d = new Date(ts.replace(' ', 'T'));
+    const m = Math.round((now - d) / 6e4);
+    if (isNaN(m)) return ts;
+    if (m < 1) return 'just now';
+    if (m < 60) return m + ' min ago';
+    const h = Math.floor(m / 60);
+    if (h < 48) return h + 'h ' + (m % 60) + 'm ago';
+    return Math.floor(h / 24) + ' days ago';
+  }
+  function battWarn(v) {
+    const num = parseFloat(String(v.BatteryLevel || '').replace('v',''));
+    return !isNaN(num) && num < 12.0;
+  }
+  function daysTo(dateStr) {
+    if (!dateStr) return null;
+    const d = new Date(String(dateStr).slice(0, 10));
+    if (isNaN(d)) return null;
+    return Math.ceil((d - now) / 864e5);
+  }
+  function dueCell(dateStr) {
+    const d = daysTo(dateStr);
+    if (d === null) return '<span class="label">not set</span>';
+    const date = String(dateStr).slice(0, 10);
+    if (d < 0) return '<span class="due-bad">' + date + ' (overdue ' + Math.abs(d) + 'd)</span>';
+    if (d <= 30) return '<span class="due-warn">' + date + ' (' + d + 'd)</span>';
+    return '<span class="due-ok">' + date + ' (' + d + 'd)</span>';
+  }
+  function compClass(c) {
+    if (!c) return 'comp-none';
+    const s = String(c.complianceStatus || '');
+    if (s.indexOf('OVERDUE') >= 0 || s.indexOf('RECALL') >= 0) return 'comp-bad';
+    if (s.indexOf('DUE SOON') >= 0) return 'comp-warn';
+    if (s.indexOf('OK') >= 0) return 'comp-ok';
+    return 'comp-none';
+  }
+  function compHtml(c) {
+    if (!c) return '<div class="comp"><div class="comp-title">COMPLIANCE</div><span style="font-size:12px;color:var(--muted)">No registry entry</span></div>';
+    let h = '<div class="comp"><div class="comp-title">COMPLIANCE</div>';
+    h += '<div class="row"><span class="label">MOT expiry</span>' + dueCell(c.motExpiry) + '</div>';
+    h += '<div class="row"><span class="label">Next service</span>' + dueCell(c.nextServiceDue) + '</div>';
+    h += '<div class="row"><span class="label">Insurance</span>' + dueCell(c.insuranceExpiry) + '</div>';
+    h += '<div class="row"><span class="label">Breakdown cover</span>' + dueCell(c.breakdownExpiry) + '</div>';
+    if (c.motOdometer) h += '<div class="row"><span class="label">Mileage at last MOT</span><span>' + Number(c.motOdometer).toLocaleString() + ' mi</span></div>';
+    if (c.hasOutstandingRecall === 'true') h += '<div class="recall">⚠ OUTSTANDING SAFETY RECALL</div>';
+    if (c.motAdvisories) h += '<div class="advisories">Advisories: ' + c.motAdvisories + '</div>';
+    h += '</div>';
+    return h;
+  }
+
+  const labels = { moving: 'MOVING', parked: 'PARKED', stale: 'STALE GPS', verystale: 'VERY STALE' };
+  const colors = { moving: '#16a34a', parked: '#2563eb', stale: '#d97706', verystale: '#dc2626' };
+
+  markerLayer.clearLayers();
+  const markers = {};
+  const bounds = [];
+  vehicles.forEach(v => {
+    if (typeof v.Lat !== 'number' || typeof v.Lon !== 'number') return;
+    const cls = classify(v);
+    const mk = L.circleMarker([v.Lat, v.Lon], {
+      radius: 9, color: '#fff', weight: 2, fillColor: colors[cls], fillOpacity: 0.95
+    }).addTo(markerLayer);
+    let pop = '<b>' + v.Registration + '</b><br>' + labels[cls] +
+      ' · ' + (v.SpeedKPH || 0) + ' km/h<br>Battery: ' + (v.BatteryLevel || '?') +
+      '<br>Position: ' + ago(v.PositionTime);
+    if (v.compliance && v.compliance.motExpiry) pop += '<br>MOT: ' + String(v.compliance.motExpiry).slice(0,10);
+    pop += '<br><small>' + (v.Address || '').replaceAll('- ', ', ') + '</small>';
+    mk.bindPopup(pop);
+    markers[v.Registration] = mk;
+    bounds.push([v.Lat, v.Lon]);
+  });
+  if (bounds.length) map.fitBounds(bounds, { padding: [35, 35] });
+
+  const cardsEl = document.getElementById('cards');
+  cardsEl.innerHTML = '';
+  let movingCount = 0, staleCount = 0, compCount = 0;
+  vehicles.forEach(v => {
+    const cls = classify(v);
+    if (cls === 'moving') movingCount++;
+    if (cls === 'stale' || cls === 'verystale') staleCount++;
+    const cc = compClass(v.compliance);
+    if (cc === 'comp-warn' || cc === 'comp-bad') compCount++;
+    const compLabel = v.compliance ? (v.compliance.complianceStatus || 'NO DATA') : 'NOT IN REGISTRY';
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML =
+      '<div class="card-top"><span class="dot ' + cls + '"></span><span class="reg">' + v.Registration + '</span>' +
+      '<span class="pill ' + cls + '">' + labels[cls] + '</span>' +
+      '<span class="pill ' + cc + '">' + compLabel + '</span></div>' +
+      '<div class="row"><span class="label">Speed</span><span>' + (v.SpeedKPH || 0) + ' km/h</span></div>' +
+      '<div class="row"><span class="label">Battery</span><span class="' + (battWarn(v) ? 'warn' : '') + '">' + (v.BatteryLevel || '?') + (battWarn(v) ? ' ⚠ low' : '') + '</span></div>' +
+      '<div class="row"><span class="label">GPS position</span><span>' + ago(v.PositionTime) + '</span></div>' +
+      compHtml(v.compliance) +
+      '<div class="addr">' + (v.Address || 'No address').replaceAll('- ', ', ') + '</div>';
+    card.onclick = () => {
+      const mk = markers[v.Registration];
+      if (mk) { map.setView(mk.getLatLng(), 15); mk.openPopup(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    };
+    cardsEl.appendChild(card);
+  });
+
+  (payload.untracked || []).forEach(c => {
+    const cc = compClass(c);
+    if (cc === 'comp-warn' || cc === 'comp-bad') compCount++;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML =
+      '<div class="card-top"><span class="reg">' + (c.vehicleName || c.reg) + '</span>' +
+      '<span class="pill parked">NO TRACKER</span>' +
+      '<span class="pill ' + cc + '">' + (c.complianceStatus || 'NO DATA') + '</span></div>' +
+      compHtml(c);
+    cardsEl.appendChild(card);
+  });
+
+  document.getElementById('stat-total').textContent = vehicles.length + (payload.untracked || []).length;
+  document.getElementById('stat-moving').textContent = movingCount;
+  document.getElementById('stat-stale').textContent = staleCount;
+  const compEl = document.getElementById('stat-comp');
+  compEl.textContent = compCount;
+  compEl.className = compCount > 0 ? 'alert' : '';
+  document.getElementById('stat-time').textContent = new Date(payload.generatedAt).toLocaleTimeString('en-GB');
+  document.getElementById('loadmsg').style.display = 'none';
+}
+
+async function load() {
+  const msg = document.getElementById('loadmsg');
+  try {
+    const res = await fetch(DATA_URL + '?t=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const payload = await res.json();
+    render(payload);
+  } catch (e) {
+    msg.style.display = 'block';
+    msg.className = 'error';
+    msg.textContent = 'Could not load fleet data (' + e.message + '). Retrying in 60 seconds…';
+    setTimeout(load, 60000);
+  }
+}
+
+load();
+setInterval(load, 300000);
+</script>
+</body>
+</html>
