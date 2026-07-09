@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HHL Fleet Register (Sandbox)</title>
+<style>
+  :root {
+    --bg: #f4f6f9; --card: #ffffff; --ink: #1f2733; --muted: #6b7686;
+    --green: #16a34a; --amber: #d97706; --red: #dc2626;
+    --border: #e3e8ef;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); }
+  header { background: #101828; color: #fff; padding: 14px 22px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  header h1 { font-size: 17px; font-weight: 600; }
+  .badge-sandbox { background: var(--amber); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; letter-spacing: .5px; }
+  .header-stats { margin-left: auto; font-size: 12.5px; color: #cbd5e1; }
+  .header-stats b { color: #fff; }
+  .tablewrap { overflow: auto; margin: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; max-height: calc(100vh - 130px); }
+  table { border-collapse: collapse; width: max-content; min-width: 100%; font-size: 12.5px; }
+  th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; vertical-align: top; }
+  thead th { position: sticky; top: 0; background: #eef2f7; z-index: 3; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); cursor: pointer; user-select: none; }
+  thead th:hover { background: #e2e8f0; }
+  tbody tr:hover { background: #f8fafc; }
+  th:first-child, td:first-child { position: sticky; left: 0; background: var(--card); z-index: 2; font-weight: 700; box-shadow: 2px 0 0 var(--border); }
+  thead th:first-child { z-index: 4; background: #eef2f7; }
+  tbody tr:hover td:first-child { background: #f8fafc; }
+  .due-ok { color: var(--green); font-weight: 600; }
+  .due-warn { color: var(--amber); font-weight: 700; }
+  .due-bad { color: var(--red); font-weight: 700; }
+  .muted { color: var(--muted); }
+  .pill { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+  .comp-ok { background: #dcfce7; color: var(--green); }
+  .comp-warn { background: #fef3c7; color: var(--amber); }
+  .comp-bad { background: #fee2e2; color: var(--red); }
+  .comp-none { background: #e8edf4; color: var(--muted); }
+  .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 3px; border: 1px solid #94a3b8; margin-right: 5px; vertical-align: -1px; }
+  .adv { max-width: 340px; white-space: normal; font-size: 11.5px; color: var(--amber); }
+  #loadmsg { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
+  #loadmsg.error { color: var(--red); }
+  footer { text-align: center; font-size: 11.5px; color: var(--muted); padding: 4px 0 18px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Heart &amp; Home Living — Fleet Register</h1>
+  <span class="badge-sandbox">SANDBOX</span>
+  <div class="header-stats">Vehicles: <b id="stat-total">–</b> · Updated: <b id="stat-time">–</b></div>
+</header>
+<div id="loadmsg">Loading fleet register…</div>
+<div class="tablewrap" id="tablewrap" style="display:none">
+  <table id="regtable">
+    <thead><tr id="headrow"></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+<footer>Click a column heading to sort · Data refreshes every 5 minutes · Same live feed as the Fleet Dashboard</footer>
+<script>
+const DATA_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-data';
+const colourMap = { white:'#f8fafc', yellow:'#facc15', grey:'#9ca3af', gray:'#9ca3af', blue:'#3b82f6', silver:'#cbd5e1', red:'#ef4444', black:'#1f2937', green:'#22c55e', orange:'#f97316' };
+let rows = [];
+let sortKey = 'reg', sortDir = 1;
+
+const COLS = [
+  { key: 'reg', label: 'Reg' },
+  { key: 'vehicle', label: 'Vehicle' },
+  { key: 'colour', label: 'Colour' },
+  { key: 'home', label: 'Home' },
+  { key: 'status', label: 'Status' },
+  { key: 'motExpiry', label: 'MOT Expiry', type: 'due' },
+  { key: 'motLastResult', label: 'Last MOT' },
+  { key: 'motOdometer', label: 'Mileage @ MOT', type: 'num' },
+  { key: 'nextServiceDue', label: 'Next Service', type: 'due' },
+  { key: 'insuranceExpiry', label: 'Insurance', type: 'due' },
+  { key: 'breakdownExpiry', label: 'Breakdown', type: 'due' },
+  { key: 'ownership', label: 'Ownership' },
+  { key: 'leaseEnd', label: 'Lease Ends', type: 'due' },
+  { key: 'contractMileage', label: 'Contract Miles', type: 'num' },
+  { key: 'contractStartMileage', label: 'Miles @ Handover', type: 'num' },
+  { key: 'excessPencePerMile', label: 'Excess p/mile', type: 'num' },
+  { key: 'motGarage', label: 'MOT Garage' },
+  { key: 'serviceGarage', label: 'Servicing' },
+  { key: 'recall', label: 'Recall' },
+  { key: 'advisories', label: 'MOT Advisories', type: 'adv' },
+  { key: 'lastChecked', label: 'Last DVSA Check' },
+  { key: 'liveAddress', label: 'Last Known Location', type: 'adv' }
+];
+
+function formatReg(r) {
+  const x = String(r || '').toUpperCase();
+  return x.length === 7 ? x.slice(0, 4) + ' ' + x.slice(4) : x;
+}
+function d10(x) { return x ? String(x).slice(0, 10) : ''; }
+function daysTo(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(String(dateStr).slice(0, 10));
+  if (isNaN(d)) return null;
+  return Math.ceil((d - new Date()) / 864e5);
+}
+function dueCell(dateStr) {
+  const d = daysTo(dateStr);
+  if (d === null) return '<span class="muted">not set</span>';
+  const date = d10(dateStr);
+  if (d < 0) return '<span class="due-bad">' + date + ' (overdue ' + Math.abs(d) + 'd)</span>';
+  if (d <= 30) return '<span class="due-warn">' + date + ' (' + d + 'd)</span>';
+  return '<span class="due-ok">' + date + ' (' + d + 'd)</span>';
+}
+function statusPill(s) {
+  const t = String(s || 'NO DATA');
+  let cls = 'comp-none';
+  if (t.indexOf('OVERDUE') >= 0 || t.indexOf('RECALL') >= 0) cls = 'comp-bad';
+  else if (t.indexOf('DUE SOON') >= 0) cls = 'comp-warn';
+  else if (t.indexOf('OK') >= 0) cls = 'comp-ok';
+  return '<span class="pill ' + cls + '">' + t + '</span>';
+}
+
+function toRow(v) {
+  const c = v.compliance || {};
+  return {
+    reg: c.reg ? formatReg(c.reg) : (v.Registration || ''),
+    vehicle: ((c.make || '') + ' ' + (c.model || '')).trim() || '—',
+    colour: c.colour || '',
+    home: c.home || '',
+    status: c.complianceStatus || 'NO DATA',
+    motExpiry: c.motExpiry || null,
+    motLastResult: c.motLastResult || '',
+    motOdometer: c.motOdometer || null,
+    nextServiceDue: c.nextServiceDue || null,
+    insuranceExpiry: c.insuranceExpiry || null,
+    breakdownExpiry: c.breakdownExpiry || null,
+    ownership: c.leaseProvider || '',
+    leaseEnd: c.leaseEnd || null,
+    contractMileage: c.contractMileage || null,
+    contractStartMileage: c.contractStartMileage || null,
+    excessPencePerMile: c.excessPencePerMile || null,
+    motGarage: c.motGarageName || '',
+    serviceGarage: c.serviceGarageName || '',
+    recall: c.hasOutstandingRecall === 'true' ? 'YES' : (c.hasOutstandingRecall === 'false' ? 'No' : ''),
+    advisories: c.motAdvisories || '',
+    lastChecked: d10(c.lastChecked),
+    liveAddress: (v.Address || '').replaceAll('- ', ', ')
+  };
+}
+
+function cellHtml(row, col) {
+  const val = row[col.key];
+  if (col.type === 'due') return dueCell(val);
+  if (col.key === 'status') return statusPill(val);
+  if (col.key === 'colour') {
+    if (!val) return '<span class="muted">—</span>';
+    const cc = colourMap[String(val).toLowerCase()] || '#9ca3af';
+    return '<span class="swatch" style="background:' + cc + '"></span>' + val;
+  }
+  if (col.key === 'recall') {
+    if (val === 'YES') return '<span class="due-bad">YES</span>';
+    return val || '<span class="muted">unknown</span>';
+  }
+  if (col.type === 'num') return (val || val === 0) ? Number(val).toLocaleString('en-GB') : '<span class="muted">—</span>';
+  if (col.type === 'adv') return val ? '<div class="adv">' + val + '</div>' : '<span class="muted">—</span>';
+  return val ? String(val) : '<span class="muted">—</span>';
+}
+
+function drawTable() {
+  const head = document.getElementById('headrow');
+  head.innerHTML = COLS.map(c => '<th data-key="' + c.key + '">' + c.label + (sortKey === c.key ? (sortDir > 0 ? ' ▲' : ' ▼') : '') + '</th>').join('');
+  head.querySelectorAll('th').forEach(th => {
+    th.onclick = () => {
+      const k = th.getAttribute('data-key');
+      if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+      drawTable();
+    };
+  });
+  const sorted = rows.slice().sort((a, b) => {
+    const x = a[sortKey], y = b[sortKey];
+    if (x === null || x === '' || x === undefined) return 1;
+    if (y === null || y === '' || y === undefined) return -1;
+    if (typeof x === 'number' && typeof y === 'number') return (x - y) * sortDir;
+    return String(x).localeCompare(String(y)) * sortDir;
+  });
+  document.getElementById('tbody').innerHTML = sorted.map(r =>
+    '<tr>' + COLS.map(c => '<td>' + cellHtml(r, c) + '</td>').join('') + '</tr>'
+  ).join('');
+}
+
+async function load() {
+  const msg = document.getElementById('loadmsg');
+  try {
+    const res = await fetch(DATA_URL + '?t=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const payload = await res.json();
+    rows = (payload.vehicles || []).map(toRow).concat((payload.untracked || []).map(c => toRow({ compliance: c })));
+    drawTable();
+    document.getElementById('stat-total').textContent = rows.length;
+    document.getElementById('stat-time').textContent = new Date(payload.generatedAt).toLocaleTimeString('en-GB');
+    msg.style.display = 'none';
+    document.getElementById('tablewrap').style.display = 'block';
+  } catch (e) {
+    msg.style.display = 'block';
+    msg.className = 'error';
+    msg.textContent = 'Could not load fleet data (' + e.message + '). Retrying in 60 seconds…';
+    setTimeout(load, 60000);
+  }
+}
+
+load();
+setInterval(load, 300000);
+</script>
+</body>
+</html>
