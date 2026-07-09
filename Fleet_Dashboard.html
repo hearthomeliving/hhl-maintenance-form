@@ -51,6 +51,7 @@
   .dot.moving { background: var(--green); } .dot.parked { background: var(--blue); }
   .dot.stale { background: var(--amber); } .dot.verystale { background: var(--red); }
   .swatch { display: inline-block; width: 13px; height: 13px; border-radius: 4px; border: 1px solid #94a3b8; flex: none; }
+  .booked { background: #dbeafe; color: var(--blue); font-size: 11.5px; font-weight: 700; padding: 4px 8px; border-radius: 6px; margin-top: 7px; display: inline-block; }
   #loadmsg { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
   #loadmsg.error { color: var(--red); }
 </style>
@@ -120,16 +121,22 @@ function render(payload) {
     const num = parseFloat(String(v.BatteryLevel || '').replace('v',''));
     return !isNaN(num) && num < 12.0;
   }
+  function isoDay(x) {
+    if (!x) return null;
+    const t = new Date(x);
+    if (isNaN(t)) return null;
+    t.setUTCHours(t.getUTCHours() + 12);
+    return t.toISOString().slice(0, 10);
+  }
   function daysTo(dateStr) {
-    if (!dateStr) return null;
-    const d = new Date(String(dateStr).slice(0, 10));
-    if (isNaN(d)) return null;
-    return Math.ceil((d - now) / 864e5);
+    const s = isoDay(dateStr);
+    if (!s) return null;
+    return Math.ceil((new Date(s) - now) / 864e5);
   }
   function dueCell(dateStr) {
     const d = daysTo(dateStr);
     if (d === null) return '<span class="label">not set</span>';
-    const date = String(dateStr).slice(0, 10);
+    const date = isoDay(dateStr);
     if (d < 0) return '<span class="due-bad">' + date + ' (overdue ' + Math.abs(d) + 'd)</span>';
     if (d <= 30) return '<span class="due-warn">' + date + ' (' + d + 'd)</span>';
     return '<span class="due-ok">' + date + ' (' + d + 'd)</span>';
@@ -151,6 +158,7 @@ function render(payload) {
     h += '<div class="row"><span class="label">Breakdown cover</span>' + dueCell(c.breakdownExpiry) + '</div>';
     h += '<div class="row"><span class="label">Road tax due</span>' + dueCell(c.taxDueDate) + '</div>';
     if (c.motOdometer) h += '<div class="row"><span class="label">Mileage at last MOT</span><span>' + Number(c.motOdometer).toLocaleString() + ' mi</span></div>';
+    if (c.bookedDate && daysTo(c.bookedDate) >= -1) h += '<div class="booked">📅 Booked in: ' + isoDay(c.bookedDate) + (c.bookedDetail ? ' — ' + c.bookedDetail : '') + '</div>';
     if (c.hasOutstandingRecall === 'true') h += '<div class="recall">⚠ OUTSTANDING SAFETY RECALL</div>';
     if (c.motAdvisories) h += '<div class="advisories">Advisories: ' + c.motAdvisories + '</div>';
     h += '</div>';
@@ -172,7 +180,7 @@ function render(payload) {
     let pop = '<b>' + (v.compliance ? formatReg(v.compliance.reg) : v.Registration) + '</b>' + (carDesc(v.compliance) ? '<br>' + carDesc(v.compliance) : '') + '<br>' + labels[cls] +
       ' · ' + (v.SpeedKPH || 0) + ' km/h<br>Battery: ' + (v.BatteryLevel || '?') +
       '<br>Position: ' + ago(v.PositionTime);
-    if (v.compliance && v.compliance.motExpiry) pop += '<br>MOT: ' + String(v.compliance.motExpiry).slice(0,10);
+    if (v.compliance && v.compliance.motExpiry) pop += '<br>MOT: ' + isoDay(v.compliance.motExpiry);
     pop += '<br><small>' + (v.Address || '').replaceAll('- ', ', ') + '</small>';
     mk.bindPopup(pop);
     markers[v.Registration] = mk;

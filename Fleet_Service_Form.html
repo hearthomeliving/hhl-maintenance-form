@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Record a Service — HHL Fleet (Sandbox)</title>
+<title>Fleet Servicing — HHL (Sandbox)</title>
 <style>
   :root { --bg:#f4f6f9; --card:#fff; --ink:#1f2733; --muted:#6b7686; --green:#16a34a; --red:#dc2626; --amber:#d97706; --border:#e3e8ef; --blue:#2563eb; }
   * { box-sizing:border-box; margin:0; padding:0; }
@@ -11,40 +11,86 @@
   header { background:#101828; color:#fff; padding:14px 22px; width:100%; display:flex; align-items:center; gap:12px; }
   header h1 { font-size:17px; font-weight:600; }
   .badge { background:var(--amber); color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; }
-  .panel { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:26px; margin:34px 16px; width:100%; max-width:440px; box-shadow:0 2px 10px rgba(16,24,40,.06); }
-  h2 { font-size:16px; margin-bottom:4px; }
-  p.hint { font-size:12.5px; color:var(--muted); margin-bottom:18px; line-height:1.5; }
+  .panel { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:26px; margin:34px 16px; width:100%; max-width:460px; box-shadow:0 2px 10px rgba(16,24,40,.06); }
+  .tabs { display:flex; gap:8px; margin-bottom:20px; }
+  .tab { flex:1; text-align:center; padding:10px 8px; border:1px solid var(--border); border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; color:var(--muted); background:#f8fafc; }
+  .tab.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+  p.hint { font-size:12.5px; color:var(--muted); margin-bottom:6px; line-height:1.5; }
   label { display:block; font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin:14px 0 5px; }
-  select, input[type=date] { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:9px; font-size:14px; background:#fff; color:var(--ink); }
+  select, input[type=date], input[type=time], input[type=text] { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:9px; font-size:14px; background:#fff; color:var(--ink); }
   button { width:100%; margin-top:22px; padding:12px; background:var(--blue); color:#fff; border:0; border-radius:9px; font-size:14.5px; font-weight:700; cursor:pointer; }
   button:disabled { opacity:.5; cursor:default; }
   #msg { margin-top:16px; font-size:13.5px; line-height:1.5; display:none; padding:12px 14px; border-radius:9px; }
   #msg.ok { display:block; background:#dcfce7; color:var(--green); }
   #msg.err { display:block; background:#fee2e2; color:var(--red); }
-  footer { font-size:11.5px; color:var(--muted); padding:0 16px 24px; text-align:center; max-width:440px; }
+  footer { font-size:11.5px; color:var(--muted); padding:0 16px 24px; text-align:center; max-width:460px; }
+  .hidden { display:none; }
 </style>
 </head>
 <body>
-<header><h1>Heart &amp; Home Living — Record a Service</h1><span class="badge">SANDBOX</span></header>
+<header><h1>Heart &amp; Home Living — Fleet Servicing</h1><span class="badge">SANDBOX</span></header>
 <div class="panel">
-  <h2>Vehicle serviced?</h2>
-  <p class="hint">Pick the vehicle and the date the service was carried out. The fleet register, dashboard and next-service reminders update automatically.</p>
+  <div class="tabs">
+    <div class="tab active" id="tab-booking">Add confirmed booking</div>
+    <div class="tab" id="tab-done">Record completed service</div>
+  </div>
+  <p class="hint" id="hint-booking">Garage confirmed a date? Enter it here — it shows on the dashboard and register so everyone knows it is booked.</p>
+  <p class="hint hidden" id="hint-done">Work carried out? Record it — resets the service cycle, updates the register, and clears the booking.</p>
   <form id="form">
     <label for="reg">Vehicle</label>
     <select id="reg" required><option value="">Loading vehicles…</option></select>
-    <label for="date">Date of service</label>
-    <input type="date" id="date" required>
-    <button type="submit" id="btn">Record service</button>
+    <div id="fields-booking">
+      <label for="bdate">Booked date</label>
+      <input type="date" id="bdate">
+      <label for="btime">Time (optional)</label>
+      <input type="time" id="btime">
+      <label for="bwhat">Booked for</label>
+      <select id="bwhat">
+        <option>MOT + Service</option>
+        <option>MOT</option>
+        <option>Service</option>
+        <option>Repair</option>
+        <option>Other</option>
+      </select>
+      <label for="bgarage">Garage (optional)</label>
+      <input type="text" id="bgarage" placeholder="e.g. Kings Car Repairs">
+    </div>
+    <div id="fields-done" class="hidden">
+      <label for="ddate">Date of service</label>
+      <input type="date" id="ddate">
+    </div>
+    <button type="submit" id="btn">Save booking</button>
   </form>
   <div id="msg"></div>
 </div>
-<footer>Sets the vehicle's last service date, recalculates the next service due date, and re-arms the booking reminder.</footer>
+<footer id="foot">Bookings show on the dashboard until the work is recorded as done.</footer>
 <script>
 const DATA_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-data';
-const SUBMIT_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-service-record';
+const SERVICE_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-service-record';
+const BOOKING_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-booking-record';
 
-document.getElementById('date').value = new Date().toISOString().slice(0, 10);
-document.getElementById('date').max = new Date().toISOString().slice(0, 10);
+let mode = 'booking';
+const today = new Date().toISOString().slice(0, 10);
+document.getElementById('bdate').value = today;
+document.getElementById('bdate').min = today;
+document.getElementById('ddate').value = today;
+document.getElementById('ddate').max = today;
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('tab-booking').className = 'tab' + (m === 'booking' ? ' active' : '');
+  document.getElementById('tab-done').className = 'tab' + (m === 'done' ? ' active' : '');
+  document.getElementById('fields-booking').className = m === 'booking' ? '' : 'hidden';
+  document.getElementById('fields-done').className = m === 'done' ? '' : 'hidden';
+  document.getElementById('hint-booking').className = 'hint' + (m === 'booking' ? '' : ' hidden');
+  document.getElementById('hint-done').className = 'hint' + (m === 'done' ? '' : ' hidden');
+  document.getElementById('btn').textContent = m === 'booking' ? 'Save booking' : 'Record service';
+  const msg = document.getElementById('msg');
+  msg.className = '';
+  msg.style.display = 'none';
+}
+document.getElementById('tab-booking').onclick = function() { setMode('booking'); };
+document.getElementById('tab-done').onclick = function() { setMode('done'); };
 
 async function loadVehicles() {
   const sel = document.getElementById('reg');
@@ -53,7 +99,7 @@ async function loadVehicles() {
     const payload = await res.json();
     const seen = new Set();
     const opts = [];
-    (payload.vehicles || []).concat((payload.untracked || []).map(c => ({ compliance: c }))).forEach(v => {
+    (payload.vehicles || []).concat((payload.untracked || []).map(function(c) { return { compliance: c }; })).forEach(function(v) {
       const c = v.compliance;
       if (!c || !c.reg || seen.has(c.reg)) return;
       seen.add(c.reg);
@@ -68,37 +114,52 @@ async function loadVehicles() {
 }
 loadVehicles();
 
-document.getElementById('form').onsubmit = async (ev) => {
+document.getElementById('form').onsubmit = async function(ev) {
   ev.preventDefault();
   const btn = document.getElementById('btn');
   const msg = document.getElementById('msg');
   const reg = document.getElementById('reg').value;
-  const date = document.getElementById('date').value;
-  if (!reg || !date) return;
+  if (!reg) return;
+  let url, body;
+  if (mode === 'booking') {
+    const date = document.getElementById('bdate').value;
+    if (!date) return;
+    url = BOOKING_URL;
+    body = 'reg=' + encodeURIComponent(reg) +
+      '&date=' + encodeURIComponent(date) +
+      '&time=' + encodeURIComponent(document.getElementById('btime').value || '') +
+      '&what=' + encodeURIComponent(document.getElementById('bwhat').value) +
+      '&garage=' + encodeURIComponent(document.getElementById('bgarage').value || '');
+  } else {
+    const date = document.getElementById('ddate').value;
+    if (!date) return;
+    url = SERVICE_URL;
+    body = 'reg=' + encodeURIComponent(reg) + '&date=' + encodeURIComponent(date);
+  }
   btn.disabled = true;
-  btn.textContent = 'Recording…';
+  btn.textContent = 'Saving…';
   msg.className = '';
   msg.style.display = 'none';
   try {
-    const res = await fetch(SUBMIT_URL, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'reg=' + encodeURIComponent(reg) + '&date=' + encodeURIComponent(date)
+      body: body
     });
     const out = await res.json();
     if (out.ok) {
       msg.className = 'ok';
-      msg.textContent = '✓ Recorded. ' + out.reg + ' serviced ' + out.lastServiceDate + ' — next service due ' + out.nextServiceDue + '.';
+      msg.textContent = '✓ ' + (out.message || 'Saved.');
     } else {
       msg.className = 'err';
-      msg.textContent = 'Not recorded: ' + (out.message || 'unknown error');
+      msg.textContent = 'Not saved: ' + (out.message || 'unknown error');
     }
   } catch (e) {
     msg.className = 'err';
     msg.textContent = 'Could not reach the system (' + e.message + '). Try again.';
   }
   btn.disabled = false;
-  btn.textContent = 'Record service';
+  btn.textContent = mode === 'booking' ? 'Save booking' : 'Record service';
 };
 </script>
 </body>

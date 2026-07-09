@@ -68,6 +68,7 @@ const COLS = [
   { key: 'colour', label: 'Colour' },
   { key: 'home', label: 'Home' },
   { key: 'status', label: 'Status' },
+  { key: 'bookedIn', label: 'Booked In' },
   { key: 'motExpiry', label: 'MOT Expiry', type: 'due' },
   { key: 'motLastResult', label: 'Last MOT' },
   { key: 'motOdometer', label: 'Mileage @ MOT', type: 'num' },
@@ -92,12 +93,18 @@ function formatReg(r) {
   const x = String(r || '').toUpperCase();
   return x.length === 7 ? x.slice(0, 4) + ' ' + x.slice(4) : x;
 }
-function d10(x) { return x ? String(x).slice(0, 10) : ''; }
+function isoDay(x) {
+  if (!x) return null;
+  const t = new Date(x);
+  if (isNaN(t)) return null;
+  t.setUTCHours(t.getUTCHours() + 12);
+  return t.toISOString().slice(0, 10);
+}
+function d10(x) { return isoDay(x) || ''; }
 function daysTo(dateStr) {
-  if (!dateStr) return null;
-  const d = new Date(String(dateStr).slice(0, 10));
-  if (isNaN(d)) return null;
-  return Math.ceil((d - new Date()) / 864e5);
+  const s = isoDay(dateStr);
+  if (!s) return null;
+  return Math.ceil((new Date(s) - new Date()) / 864e5);
 }
 function dueCell(dateStr) {
   const d = daysTo(dateStr);
@@ -124,6 +131,7 @@ function toRow(v) {
     colour: c.colour || '',
     home: c.home || '',
     status: c.complianceStatus || 'NO DATA',
+    bookedIn: (c.bookedDate && daysTo(c.bookedDate) >= -1) ? d10(c.bookedDate) + (c.bookedDetail ? ' — ' + c.bookedDetail : '') : '',
     motExpiry: c.motExpiry || null,
     motLastResult: c.motLastResult || '',
     motOdometer: c.motOdometer || null,
