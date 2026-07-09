@@ -153,7 +153,7 @@ function render(payload) {
     const mk = L.circleMarker([v.Lat, v.Lon], {
       radius: 9, color: '#fff', weight: 2, fillColor: colors[cls], fillOpacity: 0.95
     }).addTo(markerLayer);
-    let pop = '<b>' + v.Registration + '</b><br>' + labels[cls] +
+    let pop = '<b>' + ((v.compliance && v.compliance.vehicleName) || v.Registration) + '</b><br>' + labels[cls] +
       ' · ' + (v.SpeedKPH || 0) + ' km/h<br>Battery: ' + (v.BatteryLevel || '?') +
       '<br>Position: ' + ago(v.PositionTime);
     if (v.compliance && v.compliance.motExpiry) pop += '<br>MOT: ' + String(v.compliance.motExpiry).slice(0,10);
@@ -174,10 +174,11 @@ function render(payload) {
     const cc = compClass(v.compliance);
     if (cc === 'comp-warn' || cc === 'comp-bad') compCount++;
     const compLabel = v.compliance ? (v.compliance.complianceStatus || 'NO DATA') : 'NOT IN REGISTRY';
+    const displayName = (v.compliance && v.compliance.vehicleName) ? v.compliance.vehicleName : v.Registration;
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML =
-      '<div class="card-top"><span class="dot ' + cls + '"></span><span class="reg">' + v.Registration + '</span>' +
+      '<div class="card-top"><span class="dot ' + cls + '"></span><span class="reg">' + displayName + '</span>' +
       '<span class="pill ' + cls + '">' + labels[cls] + '</span>' +
       '<span class="pill ' + cc + '">' + compLabel + '</span></div>' +
       '<div class="row"><span class="label">Speed</span><span>' + (v.SpeedKPH || 0) + ' km/h</span></div>' +
