@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Record a Service — HHL Fleet (Sandbox)</title>
+<style>
+  :root { --bg:#f4f6f9; --card:#fff; --ink:#1f2733; --muted:#6b7686; --green:#16a34a; --red:#dc2626; --amber:#d97706; --border:#e3e8ef; --blue:#2563eb; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; display:flex; flex-direction:column; align-items:center; }
+  header { background:#101828; color:#fff; padding:14px 22px; width:100%; display:flex; align-items:center; gap:12px; }
+  header h1 { font-size:17px; font-weight:600; }
+  .badge { background:var(--amber); color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; }
+  .panel { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:26px; margin:34px 16px; width:100%; max-width:440px; box-shadow:0 2px 10px rgba(16,24,40,.06); }
+  h2 { font-size:16px; margin-bottom:4px; }
+  p.hint { font-size:12.5px; color:var(--muted); margin-bottom:18px; line-height:1.5; }
+  label { display:block; font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin:14px 0 5px; }
+  select, input[type=date] { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:9px; font-size:14px; background:#fff; color:var(--ink); }
+  button { width:100%; margin-top:22px; padding:12px; background:var(--blue); color:#fff; border:0; border-radius:9px; font-size:14.5px; font-weight:700; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  #msg { margin-top:16px; font-size:13.5px; line-height:1.5; display:none; padding:12px 14px; border-radius:9px; }
+  #msg.ok { display:block; background:#dcfce7; color:var(--green); }
+  #msg.err { display:block; background:#fee2e2; color:var(--red); }
+  footer { font-size:11.5px; color:var(--muted); padding:0 16px 24px; text-align:center; max-width:440px; }
+</style>
+</head>
+<body>
+<header><h1>Heart &amp; Home Living — Record a Service</h1><span class="badge">SANDBOX</span></header>
+<div class="panel">
+  <h2>Vehicle serviced?</h2>
+  <p class="hint">Pick the vehicle and the date the service was carried out. The fleet register, dashboard and next-service reminders update automatically.</p>
+  <form id="form">
+    <label for="reg">Vehicle</label>
+    <select id="reg" required><option value="">Loading vehicles…</option></select>
+    <label for="date">Date of service</label>
+    <input type="date" id="date" required>
+    <button type="submit" id="btn">Record service</button>
+  </form>
+  <div id="msg"></div>
+</div>
+<footer>Sets the vehicle's last service date, recalculates the next service due date, and re-arms the booking reminder.</footer>
+<script>
+const DATA_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-data';
+const SUBMIT_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-service-record';
+
+document.getElementById('date').value = new Date().toISOString().slice(0, 10);
+document.getElementById('date').max = new Date().toISOString().slice(0, 10);
+
+async function loadVehicles() {
+  const sel = document.getElementById('reg');
+  try {
+    const res = await fetch(DATA_URL + '?t=' + Date.now());
+    const payload = await res.json();
+    const seen = new Set();
+    const opts = [];
+    (payload.vehicles || []).concat((payload.untracked || []).map(c => ({ compliance: c }))).forEach(v => {
+      const c = v.compliance;
+      if (!c || !c.reg || seen.has(c.reg)) return;
+      seen.add(c.reg);
+      const regFmt = c.reg.length === 7 ? c.reg.slice(0, 4) + ' ' + c.reg.slice(4) : c.reg;
+      const label = regFmt + ' — ' + ((c.make || '') + ' ' + (c.model || '')).trim() + (c.colour ? ' (' + c.colour + ')' : '');
+      opts.push('<option value="' + c.reg + '">' + label + '</option>');
+    });
+    sel.innerHTML = '<option value="">Select a vehicle…</option>' + opts.sort().join('');
+  } catch (e) {
+    sel.innerHTML = '<option value="">Could not load vehicles — refresh the page</option>';
+  }
+}
+loadVehicles();
+
+document.getElementById('form').onsubmit = async (ev) => {
+  ev.preventDefault();
+  const btn = document.getElementById('btn');
+  const msg = document.getElementById('msg');
+  const reg = document.getElementById('reg').value;
+  const date = document.getElementById('date').value;
+  if (!reg || !date) return;
+  btn.disabled = true;
+  btn.textContent = 'Recording…';
+  msg.className = '';
+  msg.style.display = 'none';
+  try {
+    const res = await fetch(SUBMIT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'reg=' + encodeURIComponent(reg) + '&date=' + encodeURIComponent(date)
+    });
+    const out = await res.json();
+    if (out.ok) {
+      msg.className = 'ok';
+      msg.textContent = '✓ Recorded. ' + out.reg + ' serviced ' + out.lastServiceDate + ' — next service due ' + out.nextServiceDue + '.';
+    } else {
+      msg.className = 'err';
+      msg.textContent = 'Not recorded: ' + (out.message || 'unknown error');
+    }
+  } catch (e) {
+    msg.className = 'err';
+    msg.textContent = 'Could not reach the system (' + e.message + '). Try again.';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Record service';
+};
+</script>
+</body>
+</html>
