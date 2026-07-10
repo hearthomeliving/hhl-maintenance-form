@@ -58,6 +58,12 @@
 <footer>Click a column heading to sort · Data refreshes every 5 minutes · Same live feed as the Fleet Dashboard</footer>
 <script>
 const DATA_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-data';
+const HOME_FILTER = (new URLSearchParams(location.search).get('home') || '').trim();
+if (HOME_FILTER) {
+  const nice = HOME_FILTER.charAt(0).toUpperCase() + HOME_FILTER.slice(1).toLowerCase();
+  document.querySelector('header h1').textContent = 'Heart & Home Living — ' + nice + ' House Fleet Register';
+  document.title = nice + ' House Fleet Register (Sandbox)';
+}
 const colourMap = { white:'#f8fafc', yellow:'#facc15', grey:'#9ca3af', gray:'#9ca3af', blue:'#3b82f6', silver:'#cbd5e1', red:'#ef4444', black:'#1f2937', green:'#22c55e', orange:'#f97316' };
 let rows = [];
 let sortKey = 'reg', sortDir = 1;
@@ -67,6 +73,7 @@ const COLS = [
   { key: 'vehicle', label: 'Vehicle' },
   { key: 'colour', label: 'Colour' },
   { key: 'home', label: 'Home' },
+  { key: 'homeStatus', label: 'Home Status' },
   { key: 'status', label: 'Status' },
   { key: 'bookedIn', label: 'Booked In' },
   { key: 'motExpiry', label: 'MOT Expiry', type: 'due' },
@@ -130,6 +137,7 @@ function toRow(v) {
     vehicle: ((c.make || '') + ' ' + (c.model || '')).trim() || '—',
     colour: c.colour || '',
     home: c.home || '',
+    homeStatus: v.homeStatus ? (v.homeStatus === 'AWAY' && v.homeDistanceMiles !== null && v.homeDistanceMiles !== undefined ? 'AWAY · ' + v.homeDistanceMiles + ' mi' : v.homeStatus) : '',
     status: c.complianceStatus || 'NO DATA',
     bookedIn: (c.bookedDate && daysTo(c.bookedDate) >= -1) ? d10(c.bookedDate) + (c.bookedDetail ? ' — ' + c.bookedDetail : '') : '',
     motExpiry: c.motExpiry || null,
@@ -157,6 +165,12 @@ function cellHtml(row, col) {
   const val = row[col.key];
   if (col.type === 'due') return dueCell(val);
   if (col.key === 'status') return statusPill(val);
+  if (col.key === 'homeStatus') {
+    if (!val) return '<span class="muted">—</span>';
+    if (val === 'AT HOME') return '<span class="pill comp-ok">🏠 AT HOME</span>';
+    if (val === 'ON THE MOVE') return '<span class="pill" style="background:#dbeafe;color:#2563eb">▶ ON THE MOVE</span>';
+    return '<span class="pill comp-bad">' + val + '</span>';
+  }
   if (col.key === 'colour') {
     if (!val) return '<span class="muted">—</span>';
     const cc = colourMap[String(val).toLowerCase()] || '#9ca3af';
@@ -200,6 +214,7 @@ async function load() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const payload = await res.json();
     rows = (payload.vehicles || []).map(toRow).concat((payload.untracked || []).map(c => toRow({ compliance: c })));
+    if (HOME_FILTER) rows = rows.filter(r => String(r.home || '').toLowerCase() === HOME_FILTER.toLowerCase());
     drawTable();
     document.getElementById('stat-total').textContent = rows.length;
     document.getElementById('stat-time').textContent = new Date(payload.generatedAt).toLocaleTimeString('en-GB');

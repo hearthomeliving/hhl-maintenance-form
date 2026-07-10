@@ -52,6 +52,12 @@
   .dot.stale { background: var(--amber); } .dot.verystale { background: var(--red); }
   .swatch { display: inline-block; width: 13px; height: 13px; border-radius: 4px; border: 1px solid #94a3b8; flex: none; }
   .booked { background: #dbeafe; color: var(--blue); font-size: 11.5px; font-weight: 700; padding: 4px 8px; border-radius: 6px; margin-top: 7px; display: inline-block; }
+  .pill.hs-home { background: #dcfce7; color: var(--green); margin-left: 0; }
+  .pill.hs-away { background: #fee2e2; color: var(--red); margin-left: 0; }
+  .pill.hs-move { background: #dbeafe; color: var(--blue); margin-left: 0; }
+  .home-head { padding: 16px 20px 0; display: flex; align-items: baseline; gap: 10px; }
+  .home-head h2 { font-size: 15.5px; font-weight: 700; }
+  .home-head .sub { font-size: 12px; color: var(--muted); }
   #loadmsg { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
   #loadmsg.error { color: var(--red); }
 </style>
@@ -64,16 +70,24 @@
     <span>Vehicles: <b id="stat-total">–</b></span>
     <span>Moving: <b id="stat-moving">–</b></span>
     <span>Stale GPS: <b id="stat-stale">–</b></span>
+    <span>Away from base: <b id="stat-away">–</b></span>
     <span>Compliance alerts: <b id="stat-comp">–</b></span>
     <span>Refreshed: <b id="stat-time">–</b></span>
   </div>
 </header>
 <div id="map"></div>
 <div id="loadmsg">Loading live fleet data…</div>
-<div class="grid" id="cards"></div>
+<div id="cards"></div>
 <footer>Data: TrackIt247 + DVSA + compliance registry · Auto-refreshes every 5 minutes · Positions older than 3h flagged stale</footer>
 <script>
 const DATA_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-data';
+
+const HOME_FILTER = (new URLSearchParams(location.search).get('home') || '').trim();
+if (HOME_FILTER) {
+  const nice = HOME_FILTER.charAt(0).toUpperCase() + HOME_FILTER.slice(1).toLowerCase();
+  document.querySelector('header h1').textContent = 'Heart & Home Living — ' + nice + ' House Vehicles';
+  document.title = nice + ' House Vehicles (Sandbox)';
+}
 
 const map = L.map('map').setView([52.5, -1.0], 7);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -82,6 +96,14 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let markerLayer = L.layerGroup().addTo(map);
 
 function render(payload) {
+  if (HOME_FILTER) {
+    const hf = HOME_FILTER.toLowerCase();
+    payload = {
+      generatedAt: payload.generatedAt,
+      vehicles: (payload.vehicles || []).filter(v => v.compliance && String(v.compliance.home || '').toLowerCase() === hf),
+      untracked: (payload.untracked || []).filter(c => String(c.home || '').toLowerCase() === hf)
+    };
+  }
   const vehicles = payload.vehicles || [];
   const now = new Date();
   const colourMap = { white:'#f8fafc', yellow:'#facc15', grey:'#9ca3af', gray:'#9ca3af', blue:'#3b82f6', silver:'#cbd5e1', red:'#ef4444', black:'#1f2937', green:'#22c55e', orange:'#f97316' };
@@ -190,52 +212,86 @@ function render(payload) {
 
   const cardsEl = document.getElementById('cards');
   cardsEl.innerHTML = '';
-  let movingCount = 0, staleCount = 0, compCount = 0;
-  vehicles.forEach(v => {
+  let movingCount = 0, staleCount = 0, compCount = 0, awayCount = 0;
+
+  function hsPill(v) {
+    if (!v.homeStatus) return '';
+    if (v.homeStatus === 'AT HOME') return '<span class="pill hs-home">🏠 AT HOME</span>';
+    if (v.homeStatus === 'ON THE MOVE') return '<span class="pill hs-move">▶ ON THE MOVE</span>';
+    const d = (v.homeDistanceMiles !== null && v.homeDistanceMiles !== undefined) ? ' · ' + v.homeDistanceMiles + ' mi' : '';
+    return '<span class="pill hs-away">AWAY' + d + '</span>';
+  }
+
+  function buildCard(v) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    if (v._untracked) {
+      const c = v.compliance;
+      const cc = compClass(c);
+      if (cc === 'comp-warn' || cc === 'comp-bad') compCount++;
+      card.innerHTML =
+        '<div class="card-top"><span class="reg">' + formatReg(c.reg) + '</span>' + swatchHtml(c) +
+        '<span class="pill parked">NO TRACKER</span>' +
+        '<span class="pill ' + cc + '">' + (c.complianceStatus || 'NO DATA') + '</span></div>' +
+        (carDesc(c) ? '<div class="row"><span class="label">Vehicle</span><span>' + carDesc(c) + '</span></div>' : '') +
+        compHtml(c);
+      return card;
+    }
     const cls = classify(v);
     if (cls === 'moving') movingCount++;
     if (cls === 'stale' || cls === 'verystale') staleCount++;
+    if (v.homeStatus === 'AWAY') awayCount++;
     const cc = compClass(v.compliance);
     if (cc === 'comp-warn' || cc === 'comp-bad') compCount++;
     const compLabel = v.compliance ? (v.compliance.complianceStatus || 'NO DATA') : 'NOT IN REGISTRY';
     const displayName = v.compliance ? formatReg(v.compliance.reg) : v.Registration;
     const desc = carDesc(v.compliance);
-    const card = document.createElement('div');
-    card.className = 'card';
     card.innerHTML =
       '<div class="card-top"><span class="dot ' + cls + '"></span><span class="reg">' + displayName + '</span>' + swatchHtml(v.compliance) +
       '<span class="pill ' + cls + '">' + labels[cls] + '</span>' +
+      hsPill(v) +
       '<span class="pill ' + cc + '">' + compLabel + '</span></div>' +
       (desc ? '<div class="row"><span class="label">Vehicle</span><span>' + desc + '</span></div>' : '') +
       '<div class="row"><span class="label">Speed</span><span>' + (v.SpeedKPH || 0) + ' km/h</span></div>' +
       '<div class="row"><span class="label">Battery</span><span class="' + (battWarn(v) ? 'warn' : '') + '">' + (v.BatteryLevel || '?') + (battWarn(v) ? ' ⚠ low' : '') + '</span></div>' +
       '<div class="row"><span class="label">GPS position</span><span>' + ago(v.PositionTime) + '</span></div>' +
+      (v.homeStatus === 'AWAY' && v.homeDistanceMiles !== null ? '<div class="row"><span class="label">Distance from base</span><span class="due-warn">' + v.homeDistanceMiles + ' mi</span></div>' : '') +
       compHtml(v.compliance) +
       '<div class="addr">' + (v.Address || 'No address').replaceAll('- ', ', ') + '</div>';
     card.onclick = () => {
       const mk = markers[v.Registration];
       if (mk) { map.setView(mk.getLatLng(), 15); mk.openPopup(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
     };
-    cardsEl.appendChild(card);
-  });
+    return card;
+  }
 
-  (payload.untracked || []).forEach(c => {
-    const cc = compClass(c);
-    if (cc === 'comp-warn' || cc === 'comp-bad') compCount++;
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML =
-      '<div class="card-top"><span class="reg">' + formatReg(c.reg) + '</span>' + swatchHtml(c) +
-      '<span class="pill parked">NO TRACKER</span>' +
-      '<span class="pill ' + cc + '">' + (c.complianceStatus || 'NO DATA') + '</span></div>' +
-      (carDesc(c) ? '<div class="row"><span class="label">Vehicle</span><span>' + carDesc(c) + '</span></div>' : '') +
-      compHtml(c);
-    cardsEl.appendChild(card);
+  const all = vehicles.concat((payload.untracked || []).map(c => ({ compliance: c, _untracked: true })));
+  const groups = {};
+  all.forEach(v => {
+    const home = (v.compliance && v.compliance.home) ? v.compliance.home : 'Unassigned';
+    (groups[home] = groups[home] || []).push(v);
+  });
+  Object.keys(groups).sort().forEach(home => {
+    const vs = groups[home];
+    const atBase = vs.filter(x => x.homeStatus === 'AT HOME').length;
+    const withStatus = vs.filter(x => x.homeStatus).length;
+    const head = document.createElement('div');
+    head.className = 'home-head';
+    head.innerHTML = '<h2>🏠 ' + home + '</h2><span class="sub">' + vs.length + ' vehicle' + (vs.length === 1 ? '' : 's') +
+      (withStatus ? ' · ' + atBase + ' of ' + withStatus + ' at base' : '') + '</span>';
+    cardsEl.appendChild(head);
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    vs.forEach(v => grid.appendChild(buildCard(v)));
+    cardsEl.appendChild(grid);
   });
 
   document.getElementById('stat-total').textContent = vehicles.length + (payload.untracked || []).length;
   document.getElementById('stat-moving').textContent = movingCount;
   document.getElementById('stat-stale').textContent = staleCount;
+  const awayEl = document.getElementById('stat-away');
+  awayEl.textContent = awayCount;
+  awayEl.className = awayCount > 0 ? 'alert' : '';
   const compEl = document.getElementById('stat-comp');
   compEl.textContent = compCount;
   compEl.className = compCount > 0 ? 'alert' : '';
