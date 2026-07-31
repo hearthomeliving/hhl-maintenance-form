@@ -2,7 +2,7 @@
   "name": "HAHL Maintenance Request",
   "short_name": "HAHL Maintenance",
   "description": "Report a maintenance issue at a Heart and Home Living home.",
-  "start_url": "./maintenance-form-prototype.html",
+  "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
