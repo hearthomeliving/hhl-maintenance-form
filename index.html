@@ -1672,19 +1672,31 @@ function renderSettings() {
   modal.appendChild(el('h2', null, 'Settings'));
   modal.appendChild(el('p', { class: 'lede' }, 'Settings saved to this device only. To change globally for everyone, an admin would update the n8n config.'));
 
-  modal.appendChild(field('Routine notification recipients', el('input', {
-    type: 'text',
-    id: 's-notify-mark',
-    value: settings.notify_mark_to || '',
-    placeholder: 'mark@hearthomeliving.co.uk, another@hearthomeliving.co.uk'
-  }), 'Where routine maintenance alerts go. Comma-separated for multiple recipients.', false));
+  const routineParts = String(settings.notify_mark_to || '').split(',').map(function (x) { return x.trim(); });
+  const routineWrap = el('div');
+  for (let i = 0; i < 3; i++) {
+    routineWrap.appendChild(el('input', {
+      type: 'email',
+      id: 's-notify-mark-' + (i + 1),
+      value: routineParts[i] || '',
+      placeholder: i === 0 ? 'mark@hearthomeliving.co.uk' : '(optional)',
+      style: 'display: block; width: 100%; margin-bottom: 6px;'
+    }));
+  }
+  modal.appendChild(field('Routine notification recipients (up to 3)', routineWrap, 'Up to 3 email addresses for routine maintenance alerts. Fill in only what you need.', false));
 
-  modal.appendChild(field('Emergency notification recipients', el('input', {
-    type: 'text',
-    id: 's-notify-emergency',
-    value: settings.notify_emergency_to || '',
-    placeholder: 'laurence@hearthomeliving.co.uk, mark@hearthomeliving.co.uk'
-  }), 'Who gets alerted when a House Manager ticks an Immediate Danger or Immediate Safeguarding item on Step 1. Comma-separated for multiple recipients.', false));
+  const emergParts = String(settings.notify_emergency_to || '').split(',').map(function (x) { return x.trim(); });
+  const emergWrap = el('div');
+  for (let j = 0; j < 3; j++) {
+    emergWrap.appendChild(el('input', {
+      type: 'email',
+      id: 's-notify-emergency-' + (j + 1),
+      value: emergParts[j] || '',
+      placeholder: j === 0 ? 'laurence@hearthomeliving.co.uk' : '(optional)',
+      style: 'display: block; width: 100%; margin-bottom: 6px;'
+    }));
+  }
+  modal.appendChild(field('Emergency notification recipients (up to 3)', emergWrap, 'Up to 3 email addresses alerted when a House Manager ticks an Immediate Danger or Immediate Safeguarding item on Step 1. Fill in only what you need.', false));
 
   modal.appendChild(field('Override submitter confirmation to', el('input', {
     type: 'email',
@@ -1718,8 +1730,8 @@ function renderSettings() {
     class: 'btn-primary',
     onclick: function () {
       const newSettings = {
-        notify_mark_to: document.getElementById('s-notify-mark').value.trim(),
-        notify_emergency_to: document.getElementById('s-notify-emergency').value.trim(),
+        notify_mark_to: [1,2,3].map(function (n) { return (document.getElementById('s-notify-mark-' + n).value || '').trim(); }).filter(function (v) { return v; }).join(','),
+        notify_emergency_to: [1,2,3].map(function (n) { return (document.getElementById('s-notify-emergency-' + n).value || '').trim(); }).filter(function (v) { return v; }).join(','),
         notify_submitter_to_override: document.getElementById('s-notify-submitter').value.trim(),
         webhook_url: document.getElementById('s-webhook').value.trim() || DEFAULT_SETTINGS.webhook_url,
         debug_mode: document.getElementById('s-debug').checked
