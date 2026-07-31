@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to use the Maintenance Form</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f7f8fa;
+    color: #1f2937;
+    font-size: 15px;
+    line-height: 1.55;
+    padding: 24px 16px;
+  }
+  .page {
+    max-width: 780px;
+    margin: 0 auto 24px;
+    background: white;
+    border-radius: 12px;
+    padding: 32px 36px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.04);
+  }
+  h1 { font-size: 28px; margin: 0 0 8px; color: #0c4145; }
+  .sub { font-size: 15px; color: #6b7280; margin: 0 0 32px; }
+  h2 {
+    font-size: 20px;
+    color: #0c4145;
+    margin: 32px 0 12px;
+    padding-top: 24px;
+    border-top: 2px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  h2 .n {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #0c4145; color: white; font-size: 16px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  h3 { font-size: 16px; margin: 20px 0 8px; color: #1f2937; }
+  p { margin: 8px 0; }
+  ul { margin: 8px 0; padding-left: 20px; }
+  li { margin: 4px 0; }
+  code, .link {
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    color: #0c4145;
+    word-break: break-all;
+  }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 16px 0;
+  }
+  .col {
+    background: #f9fafb;
+    border-radius: 10px;
+    padding: 16px 20px;
+    border: 1px solid #e5e7eb;
+  }
+  .col h3 { margin-top: 0; }
+  .callout {
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin: 16px 0;
+    line-height: 1.55;
+  }
+  .callout.danger { background: #fee2e2; border: 1px solid #fca5a5; color: #7f1d1d; }
+  .callout.warn { background: #fef3c7; border: 1px solid #fde68a; color: #78350f; }
+  .callout.info { background: #dbeafe; border: 1px solid #93c5fd; color: #1e3a8a; }
+  .callout.ok { background: #dcfce7; border: 1px solid #86efac; color: #166534; }
+  .callout strong { font-weight: 600; }
+  .phone {
+    display: inline-block;
+    width: 220px;
+    background: #e5e7eb;
+    border-radius: 22px;
+    padding: 10px;
+    margin: 8px auto;
+    vertical-align: top;
+  }
+  .phone-screen {
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    font-size: 11px;
+    min-height: 320px;
+  }
+  .phone-header {
+    background: #0c4145;
+    color: white;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .phone-body { padding: 12px; }
+  .field-label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .field-box { border: 1px solid #d1d5db; border-radius: 5px; padding: 6px 8px; margin-bottom: 10px; font-size: 11px; }
+  .field-box.selected { border-color: #6ee7b7; background: #ecfdf5; }
+  .btn-primary {
+    display: inline-block;
+    background: #0c4145;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    text-align: center;
+  }
+  .photo-tile {
+    width: 60px; height: 60px;
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    vertical-align: top;
+    margin-right: 4px;
+  }
+  .steps-list {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0;
+    counter-reset: step;
+  }
+  .steps-list li {
+    counter-increment: step;
+    padding-left: 42px;
+    position: relative;
+    margin-bottom: 14px;
+    min-height: 32px;
+  }
+  .steps-list li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0; top: 0;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .do-dont {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 12px 0;
+  }
+  .do-dont .card {
+    padding: 14px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  .do-dont .do { background: #dcfce7; border-left: 4px solid #22c55e; color: #14532d; }
+  .do-dont .dont { background: #fee2e2; border-left: 4px solid #ef4444; color: #7f1d1d; }
+  .do-dont .card strong { display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .print-note {
+    background: #f3f4f6;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-top: 40px;
+    font-size: 13px;
+    color: #6b7280;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .install-icon {
+    display: inline-block;
+    width: 28px; height: 28px;
+    line-height: 28px;
+    text-align: center;
+    background: #f3f4f6;
+    border-radius: 6px;
+    font-size: 16px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  @media print {
+    body { background: white; padding: 0; }
+    .page { box-shadow: none; padding: 20px; margin: 0; max-width: 100%; }
+    h2 { page-break-after: avoid; }
+    .callout, .two-col, .phone, .do-dont { page-break-inside: avoid; }
+    .print-note { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <h1>The Maintenance Form</h1>
+  <p class="sub">A quick guide for House Managers and staff. Report anything that needs fixing in your home, in about 2 minutes on your phone.</p>
+
+  <h2><span class="n">1</span> Get the app on your phone</h2>
+  <p>You only need to do this once. After that, the Maintenance app sits on your home screen like any other app.</p>
+  <p>Go to this link on your phone:</p>
+  <p><span class="link">https://hearthomeliving.github.io/hhl-maintenance-form/</span></p>
+
+  <div class="two-col">
+    <div class="col">
+      <h3><span class="install-icon">📱</span>iPhone</h3>
+      <ol style="margin: 0; padding-left: 18px;">
+        <li>Open <strong>Safari</strong> (not Chrome).</li>
+        <li>Go to the link above.</li>
+        <li>Tap the <strong>Share</strong> button at the bottom (a square with an arrow pointing up).</li>
+        <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+        <li>Tap <strong>Add</strong> in the top right.</li>
+      </ol>
+      <p style="margin-top: 10px; font-size: 13px;">The blue "Maintenance" icon is now on your home screen.</p>
+    </div>
+    <div class="col">
+      <h3><span class="install-icon">🤖</span>Android</h3>
+      <ol style="margin: 0; padding-left: 18px;">
+        <li>Open <strong>Chrome</strong>.</li>
+        <li>Go to the link above.</li>
+        <li>Tap the <strong>three-dot menu</strong> at the top right.</li>
+        <li>Tap <strong>Install app</strong> (or <strong>Add to Home Screen</strong>).</li>
+        <li>Tap <strong>Install</strong> when asked.</li>
+      </ol>
+      <p style="margin-top: 10px; font-size: 13px;">The blue "Maintenance" icon is now on your home screen.</p>
+    </div>
+  </div>
+
+  <h2><span class="n">2</span> Fill in a maintenance request</h2>
+  <p>Tap the <strong>Maintenance</strong> icon on your home screen. Fill in each of the 8 short screens, tapping <strong>Continue</strong> after each.</p>
+
+  <div style="display: grid; grid-template-columns: 220px 1fr; gap: 20px; margin-top: 16px; align-items: start;">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="phone-header">Maintenance request</div>
+        <div class="phone-body">
+          <div style="color: #6b7280; font-size: 10px;">Step 1 of 8</div>
+          <div style="font-weight: 600; margin: 6px 0;">Tell us a bit about yourself</div>
+          <div class="field-label">Which home are you in?</div>
+          <div class="field-box selected">Aurora ▾</div>
+          <div class="field-label">Your name</div>
+          <div class="field-box">Sarah K</div>
+          <div class="field-label">Your role</div>
+          <div class="field-box selected">House Manager ▾</div>
+          <div class="btn-primary">Continue</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3 style="margin-top: 0;">What the form will ask you</h3>
+      <ol class="steps-list" style="padding-left: 0;">
+        <li><strong>Who and where.</strong> Pick your home. Add your name, your role, and the best way to reach you (WhatsApp, phone, or email).</li>
+        <li><strong>Safety check.</strong> Is anything happening right now that's dangerous? If yes, tick it. The form tells you what to do (usually: call 999 or your Manager).</li>
+        <li><strong>Quick checks.</strong> Have you tried the obvious things (plug in, switched on, tripped fuse)? Tick what you've done.</li>
+        <li><strong>Describe the issue.</strong> Type in plain English: "door jammed", "leak in bathroom", "boiler not firing". The form suggests matching categories. Tap the one that fits.</li>
+        <li><strong>Safe checks from the manual.</strong> Tick each check you've done. Tap "Can't do" if you couldn't, and add a reason.</li>
+        <li><strong>Urgent flags.</strong> Anything that makes this more urgent (safety concern, child affected). Tick what applies. The maintenance team decides how urgent from here.</li>
+        <li><strong>The details.</strong> Write a short description. Pick which room(s). Set when you first noticed it. Add a photo.</li>
+        <li><strong>Check and submit.</strong> Review the summary. Tap Submit.</li>
+      </ol>
+    </div>
+  </div>
+
+  <h2><span class="n">3</span> The photo</h2>
+  <p>Every report needs at least one photo. The maintenance team uses it to decide what tools or parts to bring, and whether they need a contractor.</p>
+
+  <div class="do-dont">
+    <div class="card do">
+      <strong>✓ Do this</strong>
+      Frame the photo on the broken thing only. Get close enough to see the fault. Good light helps.
+      <div style="margin-top: 10px;">
+        <span class="photo-tile">🚰</span> The dripping tap, close up.
+      </div>
+    </div>
+    <div class="card dont">
+      <strong>✗ Not this</strong>
+      No children in shot. No documents with names on. No medication labels. No pictures of the whole room if a close-up would do.
+      <div style="margin-top: 10px;">
+        <span class="photo-tile" style="background: linear-gradient(135deg, #fecaca, #fca5a5);">🚫</span> A wide shot with a child in the background.
+      </div>
+    </div>
+  </div>
+
+  <p style="font-size: 13px; color: #6b7280;">Photos travel outside the home. They live on the ClickUp task and in the maintenance team's inbox. Keep them tightly focused on what needs fixing.</p>
+
+  <h2><span class="n">4</span> If it's an emergency</h2>
+
+  <div class="callout danger">
+    <strong>Do not use this form as your first action in an emergency.</strong>
+    Call 999 or your on-call manager first. The form is not a replacement for the emergency phone call.
+  </div>
+
+  <div class="two-col">
+    <div class="col">
+      <h3 style="color: #991b1b;">Call 999 for:</h3>
+      <ul>
+        <li>Fire or smoke in the building</li>
+        <li>Gas smell that won't clear</li>
+        <li>Structural collapse (ceiling, wall, floor)</li>
+        <li>Flooding creating electrical danger</li>
+        <li>Someone seriously hurt or trapped</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3 style="color: #92400e;">Call on-call manager for:</h3>
+      <ul>
+        <li>Property can't be made secure</li>
+        <li>Smashed window a child could reach</li>
+        <li>Major water leak you can't stop</li>
+        <li>Fire alarm system down, no detection</li>
+        <li>Child on a life-critical medical device with power out</li>
+      </ul>
+    </div>
+  </div>
+
+  <p><strong>The form's first screen catches these situations.</strong> If you tick any of them, the form logs the emergency automatically and tells you the right numbers to call. But you still need to make the phone call yourself.</p>
+
+  <h2><span class="n">5</span> After you submit</h2>
+
+  <ul>
+    <li>You get a confirmation email with a reference number (looks like <code>MAINT-2026-1234</code>).</li>
+    <li>The maintenance team gets an alert with your photo attached.</li>
+    <li>The request appears in the maintenance queue for triage.</li>
+    <li>Someone may contact you for more information.</li>
+    <li>If you need to chase, reply to the confirmation email with the reference number.</li>
+  </ul>
+
+  <h2><span class="n">6</span> Common problems</h2>
+
+  <h3>The photo won't upload</h3>
+  <p>Usually a signal problem. Try again on WiFi.</p>
+
+  <h3>The form won't open</h3>
+  <p>Pull the screen down to refresh. If that doesn't work, close the app and reopen it.</p>
+
+  <h3>I can't find the right category</h3>
+  <p>Type what's wrong in your own words (like "door locked" or "no hot water"). The form will suggest matches. If none fit, tap <strong>Use 'Other'</strong> and describe it fully.</p>
+
+  <h3>I lost my reference number</h3>
+  <p>Check your email inbox. The confirmation is titled "Maintenance request received" and has the reference in the subject line.</p>
+
+  <h3>The Settings button asks for a password</h3>
+  <p>Settings is for admin use only. If you tapped it by accident, tap Cancel and it closes. Ignore it for normal reports.</p>
+
+  <h2><span class="n">7</span> Questions</h2>
+  <p>If something isn't working, message Adrian on WhatsApp with the reference number (if you have one) and a screenshot.</p>
+
+  <p style="margin-top: 24px; font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 16px;">
+    <strong>Heart &amp; Home Living</strong> · Maintenance Form v0.6 (hybrid) · Guide last updated 2026-07-31
+  </p>
+
+</div>
+
+<div class="print-note">
+  <strong>Printing this guide:</strong> use your browser's Print function. Ctrl+P (Windows) or ⌘+P (Mac). Set orientation to Portrait, margins to Default. It'll fit onto about 3 pages of A4.
+</div>
+
+</body>
+</html>
