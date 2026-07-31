@@ -909,6 +909,7 @@ const TOTAL_STEPS = 8;
 const SETTINGS_KEY = 'hahl-maintenance-settings-v1';
 const DEFAULT_SETTINGS = {
   notify_mark_to: 'adrian@hearthomeliving.co.uk',
+  notify_emergency_to: 'laurence@hearthomeliving.co.uk',
   notify_submitter_to_override: '',
   webhook_url: 'https://ruthbloch.app.n8n.cloud/webhook/maintenance-v1-test',
   debug_mode: false
@@ -1084,6 +1085,7 @@ function autoLogEmergency() {
     reference: ref,
     submitted_at: new Date().toISOString(),
     notify_mark_to: settings.notify_mark_to || DEFAULT_SETTINGS.notify_mark_to,
+    notify_emergency_to: settings.notify_emergency_to || DEFAULT_SETTINGS.notify_emergency_to,
     submitter: {
       name: state.name,
       role: state.role,
@@ -1590,6 +1592,7 @@ function buildPayload() {
     reference: state.refNumber,
     submitted_at: new Date().toISOString(),
     notify_mark_to: settings.notify_mark_to || DEFAULT_SETTINGS.notify_mark_to,
+    notify_emergency_to: settings.notify_emergency_to || DEFAULT_SETTINGS.notify_emergency_to,
     notify_submitter_to: settings.notify_submitter_to_override || state.contactValue || DEFAULT_SETTINGS.notify_mark_to,
     submitter: {
       name: state.name,
@@ -1669,12 +1672,19 @@ function renderSettings() {
   modal.appendChild(el('h2', null, 'Settings'));
   modal.appendChild(el('p', { class: 'lede' }, 'Settings saved to this device only. To change globally for everyone, an admin would update the n8n config.'));
 
-  modal.appendChild(field('Send "Mark" notification email to', el('input', {
-    type: 'email',
+  modal.appendChild(field('Routine notification recipients', el('input', {
+    type: 'text',
     id: 's-notify-mark',
     value: settings.notify_mark_to || '',
-    placeholder: 'adrian@hearthomeliving.co.uk'
-  }), 'Where the Mark-side notification email lands. In production this is Mark\'s real address; in sandbox, your address.', false));
+    placeholder: 'mark@hearthomeliving.co.uk, another@hearthomeliving.co.uk'
+  }), 'Where routine maintenance alerts go. Comma-separated for multiple recipients.', false));
+
+  modal.appendChild(field('Emergency notification recipients', el('input', {
+    type: 'text',
+    id: 's-notify-emergency',
+    value: settings.notify_emergency_to || '',
+    placeholder: 'laurence@hearthomeliving.co.uk, mark@hearthomeliving.co.uk'
+  }), 'Who gets alerted when a House Manager ticks an Immediate Danger or Immediate Safeguarding item on Step 1. Comma-separated for multiple recipients.', false));
 
   modal.appendChild(field('Override submitter confirmation to', el('input', {
     type: 'email',
@@ -1709,6 +1719,7 @@ function renderSettings() {
     onclick: function () {
       const newSettings = {
         notify_mark_to: document.getElementById('s-notify-mark').value.trim(),
+        notify_emergency_to: document.getElementById('s-notify-emergency').value.trim(),
         notify_submitter_to_override: document.getElementById('s-notify-submitter').value.trim(),
         webhook_url: document.getElementById('s-webhook').value.trim() || DEFAULT_SETTINGS.webhook_url,
         debug_mode: document.getElementById('s-debug').checked
