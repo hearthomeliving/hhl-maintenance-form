@@ -402,7 +402,7 @@ textarea {
 </div>
 
 <div class="settings-footer">
-  <button type="button" onclick="renderSettings()">Settings</button>
+  <button type="button" onclick="openSettings()">Settings</button>
 </div>
 
 <div id="settings-overlay" class="settings-overlay" style="display: none;"></div>
@@ -1645,6 +1645,21 @@ function submit() {
     lastSubmitStatus = 'error: ' + ((err && err.message) || 'fetch failed');
     if (state.step === 8) render();
   });
+}
+
+const SETTINGS_PASSWORD = 'hhladmin-maintenance';
+
+// Password-gate the settings panel. Client-side only; password is visible in source.
+// Purpose: prevent House Managers accidentally changing recipient email or webhook URL.
+// Not real security. Rotate the password by editing this file.
+function openSettings() {
+  const pw = window.prompt('Settings are admin-only. Enter the password:');
+  if (pw === null) return; // user hit cancel
+  if (pw !== SETTINGS_PASSWORD) {
+    window.alert('Incorrect password.');
+    return;
+  }
+  renderSettings();
 }
 
 function renderSettings() {
