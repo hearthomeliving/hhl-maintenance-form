@@ -2,7 +2,7 @@
 // Cache-first for the shell, network-first for the webhook POST (which is never cached).
 // Version bump invalidates the cache on next deploy.
 
-const CACHE_VERSION = 'hahl-maintenance-v1';
+const CACHE_VERSION = 'hahl-maintenance-v2-hybrid';
 const SHELL = [
   './',
   './maintenance-form-prototype.html',
