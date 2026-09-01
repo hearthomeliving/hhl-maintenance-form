@@ -908,8 +908,8 @@ const TOTAL_STEPS = 8;
 
 const SETTINGS_KEY = 'hahl-maintenance-settings-v1';
 const DEFAULT_SETTINGS = {
-  notify_mark_to: 'adrian@hearthomeliving.co.uk',
-  notify_emergency_to: 'laurence@hearthomeliving.co.uk',
+  notify_mark_to: 'adrianlobo13@gmail.com',
+  notify_emergency_to: 'adrianlobo13@gmail.com',
   notify_submitter_to_override: '',
   webhook_url: 'https://ruthbloch.app.n8n.cloud/webhook/maintenance-v1-test',
   debug_mode: false
@@ -947,6 +947,7 @@ const state = {
   preChecks: {},
   categoryQuery: '',
   category: '',
+  otherSafetyPassed: false,
   gateStatus: {},
   gateSkipReasons: {},
   urgentTicked: [],
@@ -1218,6 +1219,56 @@ function suggestCategories(query) {
   return ranked.slice(0, 6);
 }
 
+// Six safety questions shown when the submitter picks "Other" so an urgent
+// problem cannot slip through just because the picker had no matching label.
+// Any Yes is routed to the emergency path with the closest existing label.
+const OTHER_SAFETY_QUESTIONS = [
+  { q: 'Fire, smoke, sparks or a burning smell?', label: 'Fire or smoke in the building' },
+  { q: 'Gas smell that will not clear?', label: 'Smell of gas that will not clear' },
+  { q: 'Flooding creating serious electrical danger?', label: 'Flooding creating serious electrical danger' },
+  { q: 'Anyone seriously hurt or trapped?', label: 'Someone seriously hurt or trapped' },
+  { q: 'Property cannot be made secure right now (broken door or accessible window)?', label: 'Property cannot be made secure (broken door or accessible window)' },
+  { q: 'Major water leak that cannot be stopped?', label: 'Major water leak that cannot be stopped' }
+];
+
+function renderOtherSafetyScreener() {
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  screen.appendChild(el('p', { class: 'step-eyebrow' }, 'Safety check — Other'));
+  screen.appendChild(el('h2', { class: 'step-title' }, 'Before we log this, check none of these apply'));
+  screen.appendChild(el('p', { class: 'step-hint' }, 'You picked Other. Because the form has no specific safety prompts for it, please confirm none of the below is happening. If any is, tick it and we will route this as an emergency instead of a maintenance ticket.'));
+  const answers = {};
+  OTHER_SAFETY_QUESTIONS.forEach(function (o, i) {
+    answers[i] = false;
+    const id = 'other_safety_' + i;
+    const item = el('div', { class: 'check-item' });
+    const cb = el('input', { type: 'checkbox', id: 'cb-' + id, onchange: function (e) {
+      answers[i] = e.target.checked;
+      item.classList.toggle('checked', e.target.checked);
+    }});
+    item.appendChild(cb);
+    item.appendChild(el('label', { for: 'cb-' + id }, o.q));
+    screen.appendChild(item);
+  });
+  screen.appendChild(el('div', { class: 'info-banner', style: 'margin-top: 12px;' }, 'Tick anything that applies. Leave them all unticked only if you are sure none is happening.'));
+  const navWrap = el('div', { class: 'nav' });
+  navWrap.appendChild(el('button', { class: 'btn-secondary', onclick: function () { state.step = 3; render(); } }, 'Back'));
+  navWrap.appendChild(el('button', { class: 'btn-primary', onclick: function () {
+    const ticked = OTHER_SAFETY_QUESTIONS.filter(function (o, i) { return answers[i]; });
+    if (ticked.length > 0) {
+      ticked.forEach(function (o) {
+        if (state.emergencyTicked.indexOf(o.label) === -1) state.emergencyTicked.push(o.label);
+      });
+      renderEmergencyScreen();
+      return;
+    }
+    state.otherSafetyPassed = true;
+    state.step = 4;
+    render();
+  } }, 'None apply — continue'));
+  screen.appendChild(navWrap);
+}
+
 function renderStep3() {
   const screen = document.getElementById('screen');
   screen.innerHTML = '';
@@ -1255,6 +1306,7 @@ function renderStep3() {
       state.gateStatus = {};
       state.gateSkipReasons = {};
       state.urgentTicked = [];
+      state.otherSafetyPassed = false;
     }
     refreshSuggestions();
   }
@@ -1291,6 +1343,10 @@ function renderStep3() {
 
   screen.appendChild(navButtons({ onNext: () => {
     if (!state.category) { alert('Type a few words and tap a category, or use Other.'); return; }
+    if (state.category === 'Other (not listed above)' && !state.otherSafetyPassed) {
+      renderOtherSafetyScreener();
+      return;
+    }
     state.step = 4; render();
   } }));
 }
@@ -1462,6 +1518,14 @@ function renderStep6() {
     if (state.rooms.indexOf('Other') !== -1 && !state.roomOther.trim()) { alert('Please describe where the issue is in the Other text box.'); return; }
     if (!state.noticedAt) { alert('Set when you first noticed the issue.'); return; }
     if (state.photos.length === 0) { alert('At least one photo is mandatory per the manual.'); return; }
+    // Category = Other has no built-in SOP prompts, so raise the bar: two
+    // photos and at least fifteen words of description, so the maintenance
+    // team has enough context to triage without a call back.
+    if (state.category === 'Other (not listed above)') {
+      const wordCount = state.description.trim().split(/\s+/).filter(function (w) { return w.length > 0; }).length;
+      if (wordCount < 15) { alert('Because you picked Other, please write at least 15 words describing what is wrong. That gives the maintenance team enough to work with.'); return; }
+      if (state.photos.length < 2) { alert('Because you picked Other, please attach at least 2 photos so the maintenance team can see the problem clearly.'); return; }
+    }
     state.step = 7; render();
   } }));
 }
@@ -1794,6 +1858,7 @@ function resetState() {
   state.preChecks = {};
   state.categoryQuery = '';
   state.category = '';
+  state.otherSafetyPassed = false;
   state.gateStatus = {};
   state.gateSkipReasons = {};
   state.urgentTicked = [];
