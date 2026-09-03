@@ -427,6 +427,124 @@ const ONCALL = [
   'A child relies on a medical device requiring electricity and the power is out'
 ];
 
+// Water supplier by home. Homes not listed default to a generic prompt.
+// Update as more homes open. Anglian Water covers our Leicestershire/Northants
+// area. Thames Water covers Lynx.
+const HOME_WATER = {
+  'Aurora': { name: 'Anglian Water', number: '0345 714 5145' },
+  'Lyra': { name: 'Anglian Water', number: '0345 714 5145' },
+  'Orion': { name: 'Anglian Water', number: '0345 714 5145' },
+  'Cygnus': { name: 'Anglian Water', number: '0345 714 5145' },
+  'Leo': { name: 'Anglian Water', number: '0345 714 5145' },
+  'Lynx': { name: 'Thames Water', number: '0800 316 9800' }
+};
+
+function waterForHome(home) {
+  return HOME_WATER[home] || { name: 'Water supplier', number: 'Check the sticker on the stopcock or ring 105 to be routed' };
+}
+
+// Per-ticked-item emergency contact recipe. `calls` is the ordered list of
+// numbers to dial (top one first). `steps` is what to do while waiting for
+// the phone to answer, in the first person plural, plain-English.
+const EMERGENCY_CONTACTS = {
+  'Fire or smoke in the building': {
+    calls: [{ label: 'Fire & Rescue', number: '999' }],
+    steps: [
+      'Evacuate the children to the muster point NOW.',
+      'Close doors behind you if safe. Do not return for belongings.',
+      'Once out, call your Manager.'
+    ]
+  },
+  'Smell of gas that will not clear': {
+    calls: [
+      { label: 'National Gas Emergency', number: '0800 111 999' },
+      { label: 'If anyone is unwell or in danger', number: '999' }
+    ],
+    steps: [
+      'Do NOT use light switches, plugs, or any naked flame.',
+      'Open windows and doors if safe.',
+      'Evacuate the children to a safe outdoor spot.',
+      'Once out, call your Manager.'
+    ]
+  },
+  'Structural collapse (ceiling, wall, floor)': {
+    calls: [{ label: 'Fire & Rescue', number: '999' }],
+    steps: [
+      'Keep everyone clear of the affected area.',
+      'Do not enter the room to check.',
+      'Call your Manager and the on-call Maintenance Team.'
+    ]
+  },
+  'Flooding creating serious electrical danger': {
+    calls: [
+      { label: 'Fire & Rescue', number: '999' },
+      { label: 'Power distribution', number: '105' }
+    ],
+    steps: [
+      'Do NOT touch water anywhere near sockets, switches, or appliances.',
+      'Only turn off the mains at the fuse board if you can reach it dry and safely. If in doubt, wait outside.',
+      'Evacuate the children to a safe dry room or outdoors.'
+    ]
+  },
+  'Someone seriously hurt or trapped': {
+    calls: [{ label: 'Ambulance / Police / Fire', number: '999' }],
+    steps: [
+      'Stay with the person. Do not move them unless they are in further danger.',
+      'Send another adult to meet the ambulance at the front door.',
+      'Call your Manager.'
+    ]
+  },
+  'Property cannot be made secure (broken door or accessible window)': {
+    calls: [
+      { label: 'On-call Manager', number: 'via internal rota' },
+      { label: 'Police non-emergency', number: '101' }
+    ],
+    steps: [
+      'Do NOT leave the property unattended.',
+      'Move children away from the exposed area if there is glass or a sharp edge.',
+      'The on-call Manager will arrange boarding-up.'
+    ]
+  },
+  'Smashed window in a communal area where broken glass risks a child': {
+    calls: [{ label: 'On-call Manager', number: 'via internal rota' }],
+    steps: [
+      'Keep children out of the area. Close the door to the room if you can.',
+      'Sweep visible glass only if you can do so safely and children are elsewhere.',
+      'The on-call Manager will arrange boarding-up and a proper clean.'
+    ]
+  },
+  'Major water leak that cannot be stopped': {
+    calls: [
+      { label: 'On-call Manager', number: 'via internal rota' },
+      { label: 'WATER_FOR_HOME', number: '' }
+    ],
+    steps: [
+      'Turn off the internal stopcock if you can reach it safely.',
+      'Do NOT touch electrics near the leak. If water is reaching sockets, treat this as a fire hazard and call 999 as well.',
+      'Move children to a dry area.'
+    ]
+  },
+  'Entire fire alarm system is down with no detection': {
+    calls: [{ label: 'On-call Manager', number: 'via internal rota' }],
+    steps: [
+      'Post staff to walk the property every 30 minutes until the system is restored.',
+      'Do not put children to bed on the affected floor without an adult on watch.',
+      'The on-call Manager will call the fire safety contractor.'
+    ]
+  },
+  'A child relies on a medical device requiring electricity and the power is out': {
+    calls: [
+      { label: 'Power distribution', number: '105' },
+      { label: 'Ambulance if the child becomes unwell', number: '999' }
+    ],
+    steps: [
+      'Tell 105 that a child depends on medical equipment. This registers the home for a faster restore under the Priority Services Register.',
+      'Move the child to a warm room. Use torches, not candles.',
+      'Call your Manager.'
+    ]
+  }
+};
+
 const PRE_CHECKS = [
   'It is plugged in and the socket is switched on',
   'You have checked the fuse board for tripped switches',
@@ -1104,39 +1222,63 @@ function autoLogEmergency() {
   }).catch(function () { /* silent */ });
 }
 
+function renderEmergencyCard(itemLabel) {
+  const recipe = EMERGENCY_CONTACTS[itemLabel];
+  if (!recipe) return null;
+  const water = waterForHome(state.home);
+  const card = el('div', { style: 'border:1px solid #b91c1c; border-radius:10px; padding:12px 14px; margin-top:12px; background:#fff1f0;' });
+  card.appendChild(el('div', { style: 'font-weight:600; color:#7f1d1d; font-size:15px; margin-bottom:8px;' }, itemLabel));
+  recipe.calls.forEach(function (c) {
+    let label = c.label;
+    let number = c.number;
+    if (c.label === 'WATER_FOR_HOME') {
+      label = water.name + (state.home ? ' (' + state.home + ')' : '');
+      number = water.number;
+    }
+    const row = el('div', { style: 'margin:6px 0; display:flex; flex-direction:column;' });
+    row.appendChild(el('div', { style: 'font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:0.4px;' }, label));
+    // Only render as a tel: link when the number is actually dialable (digits present, not the "check the sticker" fallback text).
+    const looksDialable = /^[\s+()\d-]+$/.test(number);
+    if (looksDialable) {
+      const link = el('a', { href: 'tel:' + number.replace(/[^+\d]/g, ''), style: 'display:inline-block; font-size:22px; font-weight:700; color:#b91c1c; text-decoration:none; padding:4px 0;' }, number);
+      row.appendChild(link);
+    } else {
+      row.appendChild(el('div', { style: 'font-size:15px; color:#374151; padding:4px 0;' }, number));
+    }
+    card.appendChild(row);
+  });
+  const stepsList = el('ul', { style: 'font-size:14px; line-height:1.6; padding-left:18px; margin:8px 0 0; color:#1f2937;' });
+  recipe.steps.forEach(function (s) { stepsList.appendChild(el('li', null, s)); });
+  card.appendChild(stepsList);
+  return card;
+}
+
 function renderEmergencyScreen() {
   autoLogEmergency();
   const screen = document.getElementById('screen');
   screen.innerHTML = '';
   screen.appendChild(el('div', { class: 'danger-banner', html:
-    '<strong>This is not a maintenance ticket.</strong> Based on what you ticked, follow the right escalation path NOW. We have already logged this for the maintenance team to see.'
+    '<strong>This is not a maintenance ticket.</strong> For each item you ticked, do the steps shown and call the numbers listed. We have already logged this so the maintenance team can see it.'
   }));
 
-  const has999 = state.emergencyTicked.some(t => EMERGENCY_999.includes(t));
-  const hasOncall = state.emergencyTicked.some(t => ONCALL.includes(t));
+  screen.appendChild(el('h2', { class: 'step-title', style: 'margin-top:16px;' }, 'What to do now'));
 
-  if (has999) {
-    screen.appendChild(el('h2', { class: 'step-title' }, 'Call 999 now'));
-    screen.appendChild(el('p', { class: 'step-hint' }, 'Immediate danger to life.'));
-    screen.appendChild(el('ul', { style: 'font-size:14px; line-height: 1.6; padding-left: 18px;' }, [
-      el('li', null, 'Evacuate if needed.'),
-      el('li', null, 'Do not use switches if you smell gas.'),
-      el('li', null, 'Gas emergency: call 0800 111 999.'),
-      el('li', null, 'Then call 999.'),
-      el('li', { style: 'font-weight: 600;' }, 'And call your Manager now.')
-    ]));
-  }
-  if (hasOncall) {
-    screen.appendChild(el('h2', { class: 'step-title' }, 'Follow the on-call procedure'));
-    screen.appendChild(el('p', { class: 'step-hint' }, 'Immediate safeguarding risk that cannot be safely managed.'));
-    screen.appendChild(el('ul', { style: 'font-size:14px; line-height: 1.6; padding-left: 18px;' }, [
-      el('li', null, 'Call the on-call manager now.'),
-      el('li', null, 'Do not wait until morning.'),
-      el('li', { style: 'font-weight: 600;' }, 'And call your Manager now.')
-    ]));
-  }
+  // One card per ticked item, in the order they were ticked, so the person
+  // sees the exact contact and steps for what they flagged. 999 items are
+  // shown before on-call items so life-threat gets first read.
+  const ordered = state.emergencyTicked.slice().sort(function (a, b) {
+    const aLife = EMERGENCY_999.indexOf(a) !== -1;
+    const bLife = EMERGENCY_999.indexOf(b) !== -1;
+    if (aLife && !bLife) return -1;
+    if (!aLife && bLife) return 1;
+    return 0;
+  });
+  ordered.forEach(function (label) {
+    const card = renderEmergencyCard(label);
+    if (card) screen.appendChild(card);
+  });
 
-  screen.appendChild(el('div', { class: 'info-banner', style: 'margin-top: 12px;' },
+  screen.appendChild(el('div', { class: 'info-banner', style: 'margin-top: 16px;' },
     'A record has been logged automatically with reference ' + state.refNumber + ' so the maintenance team know what is happening. You do not need to fill in the rest of the form right now. Focus on the call.'
   ));
 
