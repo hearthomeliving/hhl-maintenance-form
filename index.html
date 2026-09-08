@@ -896,6 +896,101 @@ const SOP = {
 // Synonym map: words the user might type -> categories to surface
 // Used by the Step 3 typeahead to map plain English to SOP categories.
 const SYNONYM_MAP = {
+  'cupboard': ['Broken bed or furniture'],
+  'cupboards': ['Broken bed or furniture'],
+  'cabinet': ['Broken bed or furniture'],
+  'cabinets': ['Broken bed or furniture'],
+  'shelf': ['Broken bed or furniture'],
+  'shelves': ['Broken bed or furniture'],
+  'shelving': ['Broken bed or furniture'],
+  'sofa': ['Broken bed or furniture'],
+  'couch': ['Broken bed or furniture'],
+  'settee': ['Broken bed or furniture'],
+  'desk': ['Broken bed or furniture'],
+  'bookcase': ['Broken bed or furniture'],
+  'dresser': ['Broken bed or furniture'],
+  'sideboard': ['Broken bed or furniture'],
+  'drawers': ['Broken bed or furniture'],
+  'stool': ['Broken bed or furniture'],
+  'bench': ['Broken bed or furniture'],
+  'bunk': ['Broken bed or furniture'],
+  'headboard': ['Broken bed or furniture'],
+  'chest': ['Broken bed or furniture'],
+  'hinge': ['Internal door', 'Front door or lock'],
+  'latch': ['Front door or lock', 'Internal door'],
+  'doorframe': ['Internal door', 'Front door or lock'],
+  'slam': ['Internal door', 'Front door or lock'],
+  'pane': ['Window broken or damaged'],
+  'glazing': ['Window broken or damaged'],
+  'shattered': ['Window broken or damaged'],
+  'sill': ['Window broken or damaged'],
+  'burst': ['Major leak'],
+  'pipe': ['Major leak', 'Leaking tap'],
+  'pipes': ['Major leak', 'Leaking tap'],
+  'basin': ['Blocked sink', 'Leaking tap'],
+  'plughole': ['Blocked sink'],
+  'overflow': ['Blocked toilet', 'Blocked sink'],
+  'overflowing': ['Blocked toilet', 'Blocked sink'],
+  'blocked': ['Blocked sink', 'Blocked toilet'],
+  'blockage': ['Blocked sink', 'Blocked toilet'],
+  'flush': ['Blocked toilet'],
+  'cistern': ['Blocked toilet'],
+  'sewage': ['Blocked toilet', 'Major leak'],
+  'immersion': ['Heating, boiler or hot water'],
+  'combi': ['Heating, boiler or hot water'],
+  'lukewarm': ['Heating, boiler or hot water'],
+  'hotwater': ['Heating, boiler or hot water'],
+  'heater': ['Heating, boiler or hot water', 'Radiator cold'],
+  'bleed': ['Radiator cold'],
+  'switch': ['Lights not working', 'Sockets not working'],
+  'switches': ['Lights not working', 'Sockets not working'],
+  'wiring': ['Sockets not working', 'Fuse board tripped'],
+  'spark': ['Fuse board tripped', 'Sockets not working'],
+  'sparking': ['Fuse board tripped', 'Sockets not working'],
+  'outlet': ['Sockets not working'],
+  'blackout': ['Power cut'],
+  'powercut': ['Power cut'],
+  'electrics': ['Power cut', 'Fuse board tripped'],
+  'carbon': ['Fire safety (alarm or fire door)'],
+  'monoxide': ['Fire safety (alarm or fire door)'],
+  'firedoor': ['Fire safety (alarm or fire door)'],
+  'sprinkler': ['Fire safety (alarm or fire door)'],
+  'railing': ['Fence or gate damage'],
+  'railings': ['Fence or gate damage'],
+  'grass': ['Garden or external'],
+  'lawn': ['Garden or external'],
+  'hedge': ['Garden or external'],
+  'tree': ['Garden or external'],
+  'weeds': ['Garden or external'],
+  'path': ['Garden or external'],
+  'yard': ['Garden or external'],
+  'shed': ['Garden or external'],
+  'gutter': ['Garden or external'],
+  'guttering': ['Garden or external'],
+  'drainpipe': ['Garden or external'],
+  'overgrown': ['Garden or external'],
+  'rodent': ['Pests (insects, rodents, wasps)'],
+  'rodents': ['Pests (insects, rodents, wasps)'],
+  'vermin': ['Pests (insects, rodents, wasps)'],
+  'infestation': ['Pests (insects, rodents, wasps)'],
+  'moth': ['Pests (insects, rodents, wasps)'],
+  'moths': ['Pests (insects, rodents, wasps)'],
+  'flea': ['Pests (insects, rodents, wasps)'],
+  'fleas': ['Pests (insects, rodents, wasps)'],
+  'bedbug': ['Pests (insects, rodents, wasps)'],
+  'bedbugs': ['Pests (insects, rodents, wasps)'],
+  'hornet': ['Pests (insects, rodents, wasps)'],
+  'hornets': ['Pests (insects, rodents, wasps)'],
+  'nest': ['Pests (insects, rodents, wasps)'],
+  'silverfish': ['Pests (insects, rodents, wasps)'],
+  'spider': ['Pests (insects, rodents, wasps)'],
+  'spiders': ['Pests (insects, rodents, wasps)'],
+  'roach': ['Pests (insects, rodents, wasps)'],
+  'connection': ['Internet or Wi-Fi'],
+  'ethernet': ['Internet or Wi-Fi'],
+  'wireless': ['Internet or Wi-Fi'],
+  'moisture': ['Damp or mould'],
+  'grill': ['Oven (kitchen)', 'Hob (kitchen)'],
   'door': ['Front door or lock', 'Internal door', 'Lost keys or lock'],
   'lock': ['Front door or lock', 'Lost keys or lock', 'Internal door'],
   'jam': ['Front door or lock', 'Internal door'],
@@ -1433,14 +1528,7 @@ function renderStep3() {
   const sugWrap = el('div', { class: 'suggestion-list', id: 'category-suggestions' });
   screen.appendChild(sugWrap);
 
-  const fallback = el('div', { style: 'margin-top: 10px; font-size: 13px;' }, [
-    el('span', { class: 'field-help' }, "Can't find a match? "),
-    el('button', { class: 'skip-link', onclick: function (ev) {
-      ev.preventDefault();
-      pickCategory('Other (not listed above)');
-    }}, "Use 'Other'")
-  ]);
-  screen.appendChild(fallback);
+  // Other is always shown as an option in the suggestion list below.
 
   function pickCategory(cat) {
     if (state.category !== cat) {
@@ -1459,10 +1547,9 @@ function renderStep3() {
     wrap.innerHTML = '';
     const suggestions = suggestCategories(state.categoryQuery);
     if (suggestions.length === 0 && !state.category) {
-      wrap.appendChild(el('div', { class: 'field-help', style: 'padding: 8px 0;' }, 'Start typing to see matching categories.'));
-      return;
+      wrap.appendChild(el('div', { class: 'field-help', style: 'padding: 8px 0;' }, state.categoryQuery ? 'No match yet. Keep typing, or tap Other below.' : 'Start typing to see matching categories, or tap Other below.'));
     }
-    suggestions.forEach(function (cat) {
+    suggestions.filter(function (c) { return c !== 'Other (not listed above)'; }).forEach(function (cat) {
       const item = el('div', {
         class: 'check-item' + (state.category === cat ? ' checked' : ''),
         style: 'cursor: pointer;',
@@ -1473,6 +1560,16 @@ function renderStep3() {
       ]);
       wrap.appendChild(item);
     });
+    var otherPicked = state.category === 'Other (not listed above)';
+    var otherItem = el('div', {
+      class: 'check-item' + (otherPicked ? ' checked' : ''),
+      style: 'cursor: pointer;',
+      onclick: function () { pickCategory('Other (not listed above)'); }
+    }, [
+      el('span', { style: 'font-size: 18px; margin-right: 4px;' }, otherPicked ? '✓' : '·'),
+      el('label', { style: 'cursor: pointer;' }, 'Other (my issue is not listed)')
+    ]);
+    wrap.appendChild(otherItem);
     if (state.category) {
       wrap.appendChild(el('div', { class: 'info-banner', style: 'margin-top: 12px;' }, 'Picked: ' + state.category + '. The next screen will show the safe checks from the maintenance manual for this category.'));
       if (SOP[state.category] && SOP[state.category].ref) {
