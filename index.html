@@ -383,6 +383,14 @@ textarea {
   .shell { margin: 0; border-radius: 0; box-shadow: none; }
   body { background: #ffffff; }
 }
+.pc-banner{border-radius:10px;padding:12px 14px;margin:0 0 14px;line-height:1.5;font-size:14px;}
+.pc-ttl{font-weight:700;font-size:15px;margin-bottom:6px;}
+.pc-danger{background:#fee2e2;border:1px solid #fca5a5;color:#7f1d1d;}
+.pc-clear{background:#ecfdf5;border:1px solid #6ee7b7;color:#065f46;}
+.pc-warn{background:#fef3c7;border:1px solid #fde68a;color:#78350f;}
+.pc-call{display:block;background:#b91c1c;color:#fff;text-decoration:none;font-weight:700;font-size:18px;padding:11px 14px;border-radius:8px;text-align:center;margin:10px 0 6px;}
+.pc-small{font-size:12px;}
+.pc-loading{background:#f3f4f6;border:1px solid #e5e7eb;color:#6b7280;}
 </style>
 </head>
 <body>
@@ -1590,6 +1598,59 @@ function renderStep3() {
   } }));
 }
 
+/* ---- Live power-cut status (calls the n8n power-check endpoint) ---- */
+function powerCheckUrl(home) {
+  var base = settings.webhook_url || DEFAULT_SETTINGS.webhook_url;
+  var root = base.split('/webhook/')[0];
+  return root + '/webhook/power-check?home=' + encodeURIComponent(home);
+}
+function formatEtr(iso) {
+  try {
+    var dt = new Date(iso);
+    if (isNaN(dt.getTime())) return '';
+    var hh = ('0' + dt.getHours()).slice(-2);
+    var mm = ('0' + dt.getMinutes()).slice(-2);
+    var sameDay = dt.toDateString() === new Date().toDateString();
+    return (sameDay ? '' : dt.toLocaleDateString('en-GB') + ' ') + hh + ':' + mm;
+  } catch (e) { return ''; }
+}
+function fillPowerBanner(container, d) {
+  if (!container) return;
+  container.innerHTML = '';
+  var st = (d && d.state) || 'unknown';
+  var cls = (st === 'outage') ? 'pc-danger' : (st === 'clear') ? 'pc-clear' : 'pc-warn';
+  var icon = (st === 'outage' || st === 'planned') ? '\u26A1 ' : (st === 'clear' ? '\u2713 ' : '');
+  var banner = el('div', { class: 'pc-banner ' + cls });
+  if (d && d.headline) banner.appendChild(el('div', { class: 'pc-ttl' }, icon + d.headline));
+  var detail = (d && d.detail) ? d.detail : '';
+  var etr = (d && d.etr) ? formatEtr(d.etr) : '';
+  if (etr) detail = detail + ' Estimated back by ' + etr + '.';
+  if (detail) banner.appendChild(el('div', {}, detail));
+  if (d && d.call105) {
+    banner.appendChild(el('a', { href: 'tel:105', class: 'pc-call' }, 'Call 105  \u00b7  free, 24 hours'));
+    banner.appendChild(el('div', { class: 'pc-small' }, 'If a child relies on medical equipment, tell 105 so the home is prioritised for a faster restore.'));
+  }
+  container.appendChild(banner);
+}
+function renderPowerStatus(container) {
+  if (!container) return;
+  container.innerHTML = '';
+  container.appendChild(el('div', { class: 'pc-banner pc-loading' }, 'Checking the live power network map\u2026'));
+  var home = state.home || '';
+  if (!home) { container.innerHTML = ''; return; }
+  var done = false;
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  function offline() {
+    if (done) return; done = true;
+    fillPowerBanner(container, { state: 'unknown', headline: 'Could not check the live outage map', detail: 'You may be offline. Follow the checks below. If the whole street is dark, ring 105.', call105: false });
+  }
+  var timer = setTimeout(function () { if (!done) { if (ctrl) { try { ctrl.abort(); } catch (e) {} } offline(); } }, 3500);
+  fetch(powerCheckUrl(home), ctrl ? { signal: ctrl.signal } : {})
+    .then(function (r) { return r.json(); })
+    .then(function (d) { if (done) return; done = true; clearTimeout(timer); fillPowerBanner(container, d); })
+    .catch(function () { clearTimeout(timer); offline(); });
+}
+
 function renderStep4() {
   const screen = document.getElementById('screen');
   screen.innerHTML = '';
@@ -1597,6 +1658,7 @@ function renderStep4() {
   screen.appendChild(el('p', { class: 'step-eyebrow' }, 'SOP checks'));
   screen.appendChild(el('h2', { class: 'step-title' }, state.category));
   screen.appendChild(el('p', { class: 'step-hint' }, 'Tick each check you have done. If you cannot do one, tap Skip and tell us why.'));
+  if (state.category === 'Power cut') { var pcLive = el('div', { id: 'pc-live' }); screen.appendChild(pcLive); renderPowerStatus(pcLive); }
 
   const list = el('div', { class: 'check-list' });
   sop.gates.forEach((g, i) => {
