@@ -25,7 +25,7 @@
   #msg.err { display:block; background:#fee2e2; color:var(--red); }
   footer { font-size:11.5px; color:var(--muted); padding:0 16px 24px; text-align:center; max-width:460px; }
   .hidden { display:none; }
-  #current { margin-top:14px; padding:11px 13px; border-radius:9px; background:#dbeafe; color:var(--blue); font-size:13px; line-height:1.5; display:none; }
+  #current, #currenthome { margin-top:14px; padding:11px 13px; border-radius:9px; background:#dbeafe; color:var(--blue); font-size:13px; line-height:1.5; display:none; }
   #cancelbtn { background:none; border:none; color:var(--red); font-size:12.5px; font-weight:700; cursor:pointer; text-decoration:underline; padding:0; width:auto; margin:6px 0 0 0; display:block; }
 </style>
 </head>
@@ -33,11 +33,13 @@
 <header><h1>Heart &amp; Home Living — Fleet Servicing</h1><span class="badge">SANDBOX</span></header>
 <div class="panel">
   <div class="tabs">
-    <div class="tab active" id="tab-booking">Add confirmed booking</div>
-    <div class="tab" id="tab-done">Record completed service</div>
+    <div class="tab active" id="tab-booking">Add booking</div>
+    <div class="tab" id="tab-done">Record service</div>
+    <div class="tab" id="tab-move">Move vehicle</div>
   </div>
   <p class="hint" id="hint-booking">Garage confirmed a date? Enter it here — it shows on the dashboard and register so everyone knows it is booked.</p>
   <p class="hint hidden" id="hint-done">Work carried out? Record it — resets the service cycle, updates the register, and clears the booking.</p>
+  <p class="hint hidden" id="hint-move">Vehicle now based at a different home? Move it here — the dashboard, register and At home tracking regroup it automatically.</p>
   <form id="form">
     <label for="reg">Vehicle</label>
     <select id="reg" required><option value="">Loading vehicles…</option></select>
@@ -62,6 +64,19 @@
       <label for="ddate">Date of service</label>
       <input type="date" id="ddate">
     </div>
+    <div id="fields-move" class="hidden">
+      <label for="mhome">New home</label>
+      <select id="mhome">
+        <option value="">Select a home…</option>
+        <option>Aurora</option>
+        <option>Cygnus</option>
+        <option>Leo</option>
+        <option>Lynx</option>
+        <option>Lyra</option>
+        <option>Orion</option>
+      </select>
+      <div id="currenthome"></div>
+    </div>
     <button type="submit" id="btn">Save booking</button>
   </form>
   <div id="msg"></div>
@@ -71,6 +86,7 @@
 const DATA_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-data';
 const SERVICE_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-service-record';
 const BOOKING_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-booking-record';
+const MOVE_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-home-change';
 
 let mode = 'booking';
 let vehMap = {};
@@ -87,6 +103,14 @@ function showCurrent() {
   const box = document.getElementById('current');
   const reg = document.getElementById('reg').value;
   const c = vehMap[reg];
+  const homeBox = document.getElementById('currenthome');
+  if (mode === 'move' && c) {
+    homeBox.innerHTML = 'Currently assigned to: <b>' + (c.home || 'no home set') + '</b>';
+    homeBox.style.display = 'block';
+  } else {
+    homeBox.style.display = 'none';
+    homeBox.innerHTML = '';
+  }
   if (mode === 'booking' && c && c.bookedDate) {
     box.innerHTML = 'Currently booked: <b>' + isoDay(c.bookedDate) + '</b>' +
       (c.bookedDetail ? ' — ' + c.bookedDetail : '') +
@@ -130,11 +154,14 @@ function setMode(m) {
   mode = m;
   document.getElementById('tab-booking').className = 'tab' + (m === 'booking' ? ' active' : '');
   document.getElementById('tab-done').className = 'tab' + (m === 'done' ? ' active' : '');
+  document.getElementById('tab-move').className = 'tab' + (m === 'move' ? ' active' : '');
   document.getElementById('fields-booking').className = m === 'booking' ? '' : 'hidden';
   document.getElementById('fields-done').className = m === 'done' ? '' : 'hidden';
+  document.getElementById('fields-move').className = m === 'move' ? '' : 'hidden';
   document.getElementById('hint-booking').className = 'hint' + (m === 'booking' ? '' : ' hidden');
   document.getElementById('hint-done').className = 'hint' + (m === 'done' ? '' : ' hidden');
-  document.getElementById('btn').textContent = m === 'booking' ? 'Save booking' : 'Record service';
+  document.getElementById('hint-move').className = 'hint' + (m === 'move' ? '' : ' hidden');
+  document.getElementById('btn').textContent = m === 'booking' ? 'Save booking' : (m === 'done' ? 'Record service' : 'Move vehicle');
   const msg = document.getElementById('msg');
   msg.className = '';
   msg.style.display = 'none';
@@ -142,6 +169,7 @@ function setMode(m) {
 }
 document.getElementById('tab-booking').onclick = function() { setMode('booking'); };
 document.getElementById('tab-done').onclick = function() { setMode('done'); };
+document.getElementById('tab-move').onclick = function() { setMode('move'); };
 
 async function loadVehicles() {
   const sel = document.getElementById('reg');
@@ -183,6 +211,11 @@ document.getElementById('form').onsubmit = async function(ev) {
       '&time=' + encodeURIComponent(document.getElementById('btime').value || '') +
       '&what=' + encodeURIComponent(document.getElementById('bwhat').value) +
       '&garage=' + encodeURIComponent(document.getElementById('bgarage').value || '');
+  } else if (mode === 'move') {
+    const home = document.getElementById('mhome').value;
+    if (!home) return;
+    url = MOVE_URL;
+    body = 'reg=' + encodeURIComponent(reg) + '&home=' + encodeURIComponent(home);
   } else {
     const date = document.getElementById('ddate').value;
     if (!date) return;
@@ -203,6 +236,7 @@ document.getElementById('form').onsubmit = async function(ev) {
     if (out.ok) {
       msg.className = 'ok';
       msg.textContent = '✓ ' + (out.message || 'Saved.');
+      if (mode === 'move' && vehMap[reg]) { vehMap[reg].home = document.getElementById('mhome').value; showCurrent(); }
     } else {
       msg.className = 'err';
       msg.textContent = 'Not saved: ' + (out.message || 'unknown error');
@@ -212,7 +246,7 @@ document.getElementById('form').onsubmit = async function(ev) {
     msg.textContent = 'Could not reach the system (' + e.message + '). Try again.';
   }
   btn.disabled = false;
-  btn.textContent = mode === 'booking' ? 'Save booking' : 'Record service';
+  btn.textContent = mode === 'booking' ? 'Save booking' : (mode === 'done' ? 'Record service' : 'Move vehicle');
 };
 </script>
 </body>
