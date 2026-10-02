@@ -79,6 +79,8 @@ const COLS = [
   { key: 'motExpiry', label: 'MOT Expiry', type: 'due' },
   { key: 'motLastResult', label: 'Last MOT' },
   { key: 'motOdometer', label: 'Mileage @ MOT', type: 'num' },
+  { key: 'estOdometer', label: 'Est. Mileage Now', type: 'num' },
+  { key: 'milesMonth', label: 'Miles This Month', type: 'num' },
   { key: 'nextServiceDue', label: 'Next Service', type: 'due' },
   { key: 'insuranceExpiry', label: 'Insurance', type: 'due' },
   { key: 'breakdownExpiry', label: 'Breakdown', type: 'due' },
@@ -88,6 +90,8 @@ const COLS = [
   { key: 'contractMileage', label: 'Contract Miles', type: 'num' },
   { key: 'contractStartMileage', label: 'Miles @ Handover', type: 'num' },
   { key: 'excessPencePerMile', label: 'Excess p/mile', type: 'num' },
+  { key: 'projEnd', label: 'Proj. Miles @ Lease End', type: 'num' },
+  { key: 'projExcess', label: 'Proj. Excess £' },
   { key: 'motGarage', label: 'MOT Garage' },
   { key: 'serviceGarage', label: 'Servicing' },
   { key: 'recall', label: 'Recall' },
@@ -132,7 +136,26 @@ function statusPill(s) {
 
 function toRow(v) {
   const c = v.compliance || {};
+  let projEnd = null, projExcess = null;
+  if (c.estOdometer && c.leaseEnd && c.contractMileage && c.contractStartMileage) {
+    const end = new Date(c.leaseEnd);
+    const start = new Date(end);
+    start.setMonth(start.getMonth() - 36);
+    const nowD = new Date();
+    const used = c.estOdometer - c.contractStartMileage;
+    const elapsed = (nowD - start) / 864e5;
+    const remaining = Math.max(0, (end - nowD) / 864e5);
+    if (elapsed > 30 && used > 0) {
+      projEnd = Math.round(used + (used / elapsed) * remaining);
+      const over = projEnd - c.contractMileage;
+      projExcess = (over > 0 && c.excessPencePerMile) ? Math.round(over * c.excessPencePerMile / 100) : 0;
+    }
+  }
   return {
+    estOdometer: c.estOdometer ? Math.round(c.estOdometer) : null,
+    milesMonth: (c.estOdometer && (c.odoMonthStart || c.odoMonthStart === 0)) ? Math.round(c.estOdometer - c.odoMonthStart) : null,
+    projEnd: projEnd,
+    projExcess: projExcess,
     reg: c.reg ? formatReg(c.reg) : (v.Registration || ''),
     vehicle: ((c.make || '') + ' ' + (c.model || '')).trim() || '—',
     colour: c.colour || '',
@@ -165,6 +188,11 @@ function toRow(v) {
 function cellHtml(row, col) {
   const val = row[col.key];
   if (col.key === 'insuranceExpiry' && !val && row.insuranceWho) return '<span>' + row.insuranceWho + '</span>';
+  if (col.key === 'projExcess') {
+    if (val === null || val === undefined) return '<span class="muted">—</span>';
+    if (val === 0) return '<span class="due-ok">£0</span>';
+    return '<span class="due-bad">£' + Number(val).toLocaleString('en-GB') + '</span>';
+  }
   if (col.type === 'due') return dueCell(val);
   if (col.key === 'status') return statusPill(val);
   if (col.key === 'homeStatus') {

@@ -182,6 +182,7 @@ function render(payload) {
     h += '<div class="row"><span class="label">Breakdown cover</span>' + dueCell(c.breakdownExpiry) + '</div>';
     h += '<div class="row"><span class="label">Road tax due</span>' + dueCell(c.taxDueDate) + '</div>';
     if (c.motOdometer) h += '<div class="row"><span class="label">Mileage at last MOT</span><span>' + Number(c.motOdometer).toLocaleString() + ' mi</span></div>';
+    if (c.estOdometer) h += '<div class="row"><span class="label">Est. mileage now</span><span>' + Number(Math.round(c.estOdometer)).toLocaleString() + ' mi</span></div>';
     if (c.bookedDate && daysTo(c.bookedDate) >= -1) h += '<div class="booked">📅 Booked in: ' + isoDay(c.bookedDate) + (c.bookedDetail ? ' — ' + c.bookedDetail : '') + '</div>';
     if (c.hasOutstandingRecall === 'true') h += '<div class="recall">⚠ OUTSTANDING SAFETY RECALL</div>';
     if (c.motAdvisories) h += '<div class="advisories">Advisories: ' + c.motAdvisories + '</div>';
