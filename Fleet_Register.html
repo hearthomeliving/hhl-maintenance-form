@@ -145,6 +145,7 @@ function toRow(v) {
     motOdometer: c.motOdometer || null,
     nextServiceDue: c.nextServiceDue || null,
     insuranceExpiry: c.insuranceExpiry || null,
+    insuranceWho: c.insuranceExpiry ? null : (c.leaseProvider === 'Owned' ? 'Owned' : (c.leaseProvider || null)),
     breakdownExpiry: c.breakdownExpiry || null,
     taxDueDate: c.taxDueDate || null,
     ownership: c.leaseProvider || '',
@@ -163,6 +164,7 @@ function toRow(v) {
 
 function cellHtml(row, col) {
   const val = row[col.key];
+  if (col.key === 'insuranceExpiry' && !val && row.insuranceWho) return '<span>' + row.insuranceWho + '</span>';
   if (col.type === 'due') return dueCell(val);
   if (col.key === 'status') return statusPill(val);
   if (col.key === 'homeStatus') {

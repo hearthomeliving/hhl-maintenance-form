@@ -55,7 +55,8 @@
   .pill.hs-home { background: #dcfce7; color: var(--green); margin-left: 0; }
   .pill.hs-away { background: #fee2e2; color: var(--red); margin-left: 0; }
   .pill.hs-move { background: #dbeafe; color: var(--blue); margin-left: 0; }
-  .home-head { padding: 16px 20px 0; display: flex; align-items: baseline; gap: 10px; }
+  .home-head { padding: 16px 20px 0; display: flex; align-items: center; gap: 10px; }
+  .tl { width: 13px; height: 13px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px #fff, 0 1px 3px rgba(16,24,40,.25); }
   .home-head h2 { font-size: 15.5px; font-weight: 700; }
   .home-head .sub { font-size: 12px; color: var(--muted); }
   #loadmsg { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
@@ -176,7 +177,7 @@ function render(payload) {
     let h = '<div class="comp"><div class="comp-title">COMPLIANCE</div>';
     h += '<div class="row"><span class="label">MOT expiry</span>' + dueCell(c.motExpiry) + '</div>';
     h += '<div class="row"><span class="label">Next service</span>' + dueCell(c.nextServiceDue) + '</div>';
-    h += '<div class="row"><span class="label">Insurance</span>' + dueCell(c.insuranceExpiry) + '</div>';
+    h += '<div class="row"><span class="label">Insurance</span>' + (c.insuranceExpiry ? dueCell(c.insuranceExpiry) : '<span>' + (c.leaseProvider === 'Owned' ? 'Owned' : (c.leaseProvider || '—')) + '</span>') + '</div>';
     h += '<div class="row"><span class="label">Breakdown cover</span>' + dueCell(c.breakdownExpiry) + '</div>';
     h += '<div class="row"><span class="label">Road tax due</span>' + dueCell(c.taxDueDate) + '</div>';
     if (c.motOdometer) h += '<div class="row"><span class="label">Mileage at last MOT</span><span>' + Number(c.motOdometer).toLocaleString() + ' mi</span></div>';
@@ -250,10 +251,9 @@ function render(payload) {
       '<div class="card-top"><span class="dot ' + cls + '"></span><span class="reg">' + displayName + '</span>' + swatchHtml(v.compliance) +
       '<span class="pill ' + cls + '">' + labels[cls] + '</span>' +
       hsPill(v) +
-      '<span class="pill ' + cc + '">' + compLabel + '</span></div>' +
+      '<span class="pill ' + cc + '">' + compLabel + '</span>' +
+      (battWarn(v) ? '<span class="pill comp-bad">⚠ BATTERY LOW ' + (v.BatteryLevel || '') + '</span>' : '') + '</div>' +
       (desc ? '<div class="row"><span class="label">Vehicle</span><span>' + desc + '</span></div>' : '') +
-      '<div class="row"><span class="label">Speed</span><span>' + (v.SpeedKPH || 0) + ' km/h</span></div>' +
-      '<div class="row"><span class="label">Battery</span><span class="' + (battWarn(v) ? 'warn' : '') + '">' + (v.BatteryLevel || '?') + (battWarn(v) ? ' ⚠ low' : '') + '</span></div>' +
       '<div class="row"><span class="label">GPS position</span><span>' + ago(v.PositionTime) + '</span></div>' +
       (v.homeStatus === 'AWAY' && v.homeDistanceMiles !== null ? '<div class="row"><span class="label">Distance from base</span><span class="due-warn">' + v.homeDistanceMiles + ' mi</span></div>' : '') +
       compHtml(v.compliance) +
@@ -275,9 +275,12 @@ function render(payload) {
     const vs = groups[home];
     const atBase = vs.filter(x => x.homeStatus === 'AT HOME').length;
     const withStatus = vs.filter(x => x.homeStatus).length;
+    const ccs = vs.map(x => compClass(x.compliance));
+    const tl = ccs.indexOf('comp-bad') >= 0 ? '#dc2626' : (ccs.indexOf('comp-warn') >= 0 ? '#d97706' : '#16a34a');
+    const tlTitle = tl === '#dc2626' ? 'Action needed' : (tl === '#d97706' ? 'Due soon' : 'All OK');
     const head = document.createElement('div');
     head.className = 'home-head';
-    head.innerHTML = '<h2>🏠 ' + home + '</h2><span class="sub">' + vs.length + ' vehicle' + (vs.length === 1 ? '' : 's') +
+    head.innerHTML = '<span class="tl" style="background:' + tl + '" title="' + tlTitle + '"></span><h2>' + home + '</h2><span class="sub">' + vs.length + ' vehicle' + (vs.length === 1 ? '' : 's') +
       (withStatus ? ' · ' + atBase + ' of ' + withStatus + ' at base' : '') + '</span>';
     cardsEl.appendChild(head);
     const grid = document.createElement('div');
