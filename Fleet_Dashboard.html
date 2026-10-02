@@ -101,6 +101,7 @@ function render(payload) {
     const hf = HOME_FILTER.toLowerCase();
     payload = {
       generatedAt: payload.generatedAt,
+      homes: payload.homes || [],
       vehicles: (payload.vehicles || []).filter(v => v.compliance && String(v.compliance.home || '').toLowerCase() === hf),
       untracked: (payload.untracked || []).filter(c => String(c.home || '').toLowerCase() === hf)
     };
@@ -278,10 +279,12 @@ function render(payload) {
     const ccs = vs.map(x => compClass(x.compliance));
     const tl = ccs.indexOf('comp-bad') >= 0 ? '#dc2626' : (ccs.indexOf('comp-warn') >= 0 ? '#d97706' : '#16a34a');
     const tlTitle = tl === '#dc2626' ? 'Action needed' : (tl === '#d97706' ? 'Due soon' : 'All OK');
+    const prof = (payload.homes || []).find(h => h.home === home);
+    const mgrTxt = (prof && prof.manager) ? ' · Manager: ' + prof.manager + (prof.deputy ? ' · Deputy: ' + prof.deputy : '') : '';
     const head = document.createElement('div');
     head.className = 'home-head';
     head.innerHTML = '<span class="tl" style="background:' + tl + '" title="' + tlTitle + '"></span><h2>' + home + '</h2><span class="sub">' + vs.length + ' vehicle' + (vs.length === 1 ? '' : 's') +
-      (withStatus ? ' · ' + atBase + ' of ' + withStatus + ' at base' : '') + '</span>';
+      (withStatus ? ' · ' + atBase + ' of ' + withStatus + ' at base' : '') + mgrTxt + '</span>';
     cardsEl.appendChild(head);
     const grid = document.createElement('div');
     grid.className = 'grid';

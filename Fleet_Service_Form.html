@@ -33,16 +33,20 @@
 <header><h1>Heart &amp; Home Living — Fleet Servicing</h1><span class="badge">SANDBOX</span></header>
 <div class="panel">
   <div class="tabs">
-    <div class="tab active" id="tab-booking">Add booking</div>
-    <div class="tab" id="tab-done">Record service</div>
-    <div class="tab" id="tab-move">Move vehicle</div>
+    <div class="tab active" id="tab-booking">Booking</div>
+    <div class="tab" id="tab-done">Service</div>
+    <div class="tab" id="tab-move">Move</div>
+    <div class="tab" id="tab-contacts">Contacts</div>
   </div>
   <p class="hint" id="hint-booking">Garage confirmed a date? Enter it here — it shows on the dashboard and register so everyone knows it is booked.</p>
   <p class="hint hidden" id="hint-done">Work carried out? Record it — resets the service cycle, updates the register, and clears the booking.</p>
   <p class="hint hidden" id="hint-move">Vehicle now based at a different home? Move it here — the dashboard, register and At home tracking regroup it automatically.</p>
+  <p class="hint hidden" id="hint-contacts">Manager or deputy changed at a home? Update the contact details here — alerts and booking emails use these.</p>
   <form id="form">
+    <div id="vehwrap">
     <label for="reg">Vehicle</label>
-    <select id="reg" required><option value="">Loading vehicles…</option></select>
+    <select id="reg"><option value="">Loading vehicles…</option></select>
+    </div>
     <div id="fields-booking">
       <label for="bdate">Booked date</label>
       <input type="date" id="bdate">
@@ -77,6 +81,26 @@
       </select>
       <div id="currenthome"></div>
     </div>
+    <div id="fields-contacts" class="hidden">
+      <label for="chome">Home</label>
+      <select id="chome">
+        <option value="">Select a home…</option>
+        <option>Aurora</option>
+        <option>Cygnus</option>
+        <option>Leo</option>
+        <option>Lynx</option>
+        <option>Lyra</option>
+        <option>Orion</option>
+      </select>
+      <label for="cmgr">Manager</label>
+      <input type="text" id="cmgr" placeholder="Manager name">
+      <label for="cmgremail">Manager email</label>
+      <input type="text" id="cmgremail" placeholder="name@hearthomeliving.co.uk">
+      <label for="cdep">Deputy</label>
+      <input type="text" id="cdep" placeholder="Deputy name">
+      <label for="cdepemail">Deputy email</label>
+      <input type="text" id="cdepemail" placeholder="name@hearthomeliving.co.uk">
+    </div>
     <button type="submit" id="btn">Save booking</button>
   </form>
   <div id="msg"></div>
@@ -87,6 +111,25 @@ const DATA_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-data';
 const SERVICE_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-service-record';
 const BOOKING_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-booking-record';
 const MOVE_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-home-change';
+const PROFILES_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-home-profiles';
+const PROFILE_SAVE_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-home-profile';
+
+let profiles = {};
+async function loadProfiles() {
+  try {
+    const res = await fetch(PROFILES_URL + '?t=' + Date.now());
+    const out = await res.json();
+    (out.homes || []).forEach(function(h) { profiles[h.home] = h; });
+    fillContacts();
+  } catch (e) {}
+}
+function fillContacts() {
+  const h = profiles[document.getElementById('chome').value];
+  document.getElementById('cmgr').value = h ? (h.manager || '') : '';
+  document.getElementById('cmgremail').value = h ? (h.managerEmail || '') : '';
+  document.getElementById('cdep').value = h ? (h.deputy || '') : '';
+  document.getElementById('cdepemail').value = h ? (h.deputyEmail || '') : '';
+}
 
 let mode = 'booking';
 let vehMap = {};
@@ -150,26 +193,33 @@ document.getElementById('bdate').min = today;
 document.getElementById('ddate').value = today;
 document.getElementById('ddate').max = today;
 
+const BTN_LABELS = { booking: 'Save booking', done: 'Record service', move: 'Move vehicle', contacts: 'Save contacts' };
 function setMode(m) {
   mode = m;
-  document.getElementById('tab-booking').className = 'tab' + (m === 'booking' ? ' active' : '');
-  document.getElementById('tab-done').className = 'tab' + (m === 'done' ? ' active' : '');
-  document.getElementById('tab-move').className = 'tab' + (m === 'move' ? ' active' : '');
+  ['booking', 'done', 'move', 'contacts'].forEach(function(k) {
+    const tabId = k === 'booking' ? 'tab-booking' : (k === 'done' ? 'tab-done' : (k === 'move' ? 'tab-move' : 'tab-contacts'));
+    document.getElementById(tabId).className = 'tab' + (m === k ? ' active' : '');
+    const hintId = 'hint-' + k;
+    document.getElementById(hintId).className = 'hint' + (m === k ? '' : ' hidden');
+  });
   document.getElementById('fields-booking').className = m === 'booking' ? '' : 'hidden';
   document.getElementById('fields-done').className = m === 'done' ? '' : 'hidden';
   document.getElementById('fields-move').className = m === 'move' ? '' : 'hidden';
-  document.getElementById('hint-booking').className = 'hint' + (m === 'booking' ? '' : ' hidden');
-  document.getElementById('hint-done').className = 'hint' + (m === 'done' ? '' : ' hidden');
-  document.getElementById('hint-move').className = 'hint' + (m === 'move' ? '' : ' hidden');
-  document.getElementById('btn').textContent = m === 'booking' ? 'Save booking' : (m === 'done' ? 'Record service' : 'Move vehicle');
+  document.getElementById('fields-contacts').className = m === 'contacts' ? '' : 'hidden';
+  document.getElementById('vehwrap').className = m === 'contacts' ? 'hidden' : '';
+  document.getElementById('btn').textContent = BTN_LABELS[m];
   const msg = document.getElementById('msg');
   msg.className = '';
   msg.style.display = 'none';
   showCurrent();
+  if (m === 'contacts') fillContacts();
 }
 document.getElementById('tab-booking').onclick = function() { setMode('booking'); };
 document.getElementById('tab-done').onclick = function() { setMode('done'); };
 document.getElementById('tab-move').onclick = function() { setMode('move'); };
+document.getElementById('tab-contacts').onclick = function() { setMode('contacts'); };
+document.getElementById('chome').onchange = fillContacts;
+loadProfiles();
 
 async function loadVehicles() {
   const sel = document.getElementById('reg');
@@ -200,9 +250,18 @@ document.getElementById('form').onsubmit = async function(ev) {
   const btn = document.getElementById('btn');
   const msg = document.getElementById('msg');
   const reg = document.getElementById('reg').value;
-  if (!reg) return;
+  if (mode !== 'contacts' && !reg) return;
   let url, body;
-  if (mode === 'booking') {
+  if (mode === 'contacts') {
+    const home = document.getElementById('chome').value;
+    if (!home) return;
+    url = PROFILE_SAVE_URL;
+    body = 'home=' + encodeURIComponent(home) +
+      '&manager=' + encodeURIComponent(document.getElementById('cmgr').value || '') +
+      '&managerEmail=' + encodeURIComponent(document.getElementById('cmgremail').value || '') +
+      '&deputy=' + encodeURIComponent(document.getElementById('cdep').value || '') +
+      '&deputyEmail=' + encodeURIComponent(document.getElementById('cdepemail').value || '');
+  } else if (mode === 'booking') {
     const date = document.getElementById('bdate').value;
     if (!date) return;
     url = BOOKING_URL;
@@ -237,6 +296,10 @@ document.getElementById('form').onsubmit = async function(ev) {
       msg.className = 'ok';
       msg.textContent = '✓ ' + (out.message || 'Saved.');
       if (mode === 'move' && vehMap[reg]) { vehMap[reg].home = document.getElementById('mhome').value; showCurrent(); }
+      if (mode === 'contacts') {
+        const home = document.getElementById('chome').value;
+        profiles[home] = { home: home, manager: document.getElementById('cmgr').value, managerEmail: document.getElementById('cmgremail').value, deputy: document.getElementById('cdep').value, deputyEmail: document.getElementById('cdepemail').value };
+      }
     } else {
       msg.className = 'err';
       msg.textContent = 'Not saved: ' + (out.message || 'unknown error');
@@ -246,7 +309,7 @@ document.getElementById('form').onsubmit = async function(ev) {
     msg.textContent = 'Could not reach the system (' + e.message + '). Try again.';
   }
   btn.disabled = false;
-  btn.textContent = mode === 'booking' ? 'Save booking' : (mode === 'done' ? 'Record service' : 'Move vehicle');
+  btn.textContent = BTN_LABELS[mode];
 };
 </script>
 </body>
