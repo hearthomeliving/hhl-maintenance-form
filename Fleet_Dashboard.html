@@ -173,6 +173,20 @@ function render(payload) {
     if (s.indexOf('OK') >= 0) return 'comp-ok';
     return 'comp-none';
   }
+  function compText(c) {
+    if (!c) return 'NOT IN REGISTRY';
+    let t = c.complianceStatus || 'NO DATA';
+    const defs = [['MOT', c.motExpiry], ['Service', c.nextServiceDue], ['Insurance', c.insuranceExpiry], ['Breakdown', c.breakdownExpiry], ['Tax', c.taxDueDate]];
+    const reasons = [];
+    for (let i = 0; i < defs.length; i++) {
+      const d = daysTo(defs[i][1]);
+      if (d === null) continue;
+      if (d < 0) reasons.push(defs[i][0] + ' overdue ' + Math.abs(d) + 'd');
+      else if (d <= 30) reasons.push(defs[i][0] + ' due ' + isoDay(defs[i][1]));
+    }
+    if (reasons.length) t += ' · ' + reasons.join(' · ');
+    return t;
+  }
   function compHtml(c) {
     if (!c) return '<div class="comp"><div class="comp-title">COMPLIANCE</div><span style="font-size:12px;color:var(--muted)">No registry entry</span></div>';
     let h = '<div class="comp"><div class="comp-title">COMPLIANCE</div>';
@@ -235,7 +249,7 @@ function render(payload) {
       card.innerHTML =
         '<div class="card-top"><span class="reg">' + formatReg(c.reg) + '</span>' + swatchHtml(c) +
         '<span class="pill parked">NO TRACKER</span>' +
-        '<span class="pill ' + cc + '">' + (c.complianceStatus || 'NO DATA') + '</span></div>' +
+        '<span class="pill ' + cc + '">' + compText(c) + '</span></div>' +
         (carDesc(c) ? '<div class="row"><span class="label">Vehicle</span><span>' + carDesc(c) + '</span></div>' : '') +
         compHtml(c);
       return card;
@@ -246,7 +260,7 @@ function render(payload) {
     if (v.homeStatus === 'AWAY') awayCount++;
     const cc = compClass(v.compliance);
     if (cc === 'comp-warn' || cc === 'comp-bad') compCount++;
-    const compLabel = v.compliance ? (v.compliance.complianceStatus || 'NO DATA') : 'NOT IN REGISTRY';
+    const compLabel = compText(v.compliance);
     const displayName = v.compliance ? formatReg(v.compliance.reg) : v.Registration;
     const desc = carDesc(v.compliance);
     card.innerHTML =

@@ -126,8 +126,20 @@ function dueCell(dateStr) {
   if (d <= 30) return '<span class="due-warn">' + date + ' (' + d + 'd)</span>';
   return '<span class="due-ok">' + date + ' (' + d + 'd)</span>';
 }
-function statusPill(s) {
-  const t = String(s || 'NO DATA');
+function dueReasons(row) {
+  const defs = [['MOT', row.motExpiry], ['Service', row.nextServiceDue], ['Insurance', row.insuranceExpiry], ['Breakdown', row.breakdownExpiry], ['Tax', row.taxDueDate]];
+  const out = [];
+  for (let i = 0; i < defs.length; i++) {
+    const d = daysTo(defs[i][1]);
+    if (d === null) continue;
+    if (d < 0) out.push(defs[i][0] + ' overdue ' + Math.abs(d) + 'd');
+    else if (d <= 30) out.push(defs[i][0] + ' due ' + d10(defs[i][1]));
+  }
+  return out;
+}
+function statusPill(s, reasons) {
+  let t = String(s || 'NO DATA');
+  if (reasons && reasons.length) t += ' · ' + reasons.join(' · ');
   let cls = 'comp-none';
   if (t.indexOf('OVERDUE') >= 0 || t.indexOf('RECALL') >= 0) cls = 'comp-bad';
   else if (t.indexOf('DUE SOON') >= 0) cls = 'comp-warn';
@@ -202,7 +214,7 @@ function cellHtml(row, col) {
     return '<span class="due-bad">£' + Number(val).toLocaleString('en-GB') + '</span>';
   }
   if (col.type === 'due') return dueCell(val);
-  if (col.key === 'status') return statusPill(val);
+  if (col.key === 'status') return statusPill(val, dueReasons(row));
   if (col.key === 'homeStatus') {
     if (!val) return '<span class="muted">—</span>';
     if (val === 'AT HOME') return '<span class="pill comp-ok">🏠 AT HOME</span>';
