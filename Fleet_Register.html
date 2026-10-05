@@ -71,6 +71,7 @@ let sortKey = 'reg', sortDir = 1;
 const COLS = [
   { key: 'reg', label: 'Reg' },
   { key: 'vehicle', label: 'Vehicle' },
+  { key: 'ownership', label: 'Owned / Leased' },
   { key: 'colour', label: 'Colour' },
   { key: 'home', label: 'Home' },
   { key: 'homeStatus', label: 'Home Status' },
@@ -86,7 +87,6 @@ const COLS = [
   { key: 'insuranceExpiry', label: 'Insurance', type: 'due' },
   { key: 'breakdownExpiry', label: 'Breakdown', type: 'due' },
   { key: 'taxDueDate', label: 'Tax Due', type: 'due' },
-  { key: 'ownership', label: 'Ownership' },
   { key: 'leaseEnd', label: 'Lease Ends', type: 'due' },
   { key: 'contractMileage', label: 'Contract Miles', type: 'num' },
   { key: 'contractStartMileage', label: 'Miles @ Handover', type: 'num' },
@@ -202,6 +202,10 @@ function toRow(v) {
 function cellHtml(row, col) {
   const val = row[col.key];
   if (col.key === 'insuranceExpiry' && !val && row.insuranceWho) return '<span>' + row.insuranceWho + '</span>';
+  if (col.key === 'ownership') {
+    if (!val) return '<span class="muted">—</span>';
+    return val === 'Owned' ? '<span class="pill comp-none">OWNED</span>' : '<span class="pill comp-none">LEASED · ' + val + '</span>';
+  }
   if (col.key === 'lastCheck') {
     if (!val) return '<span class="due-bad">never</span>';
     const ago = Math.round((new Date() - new Date(val)) / 864e5);
