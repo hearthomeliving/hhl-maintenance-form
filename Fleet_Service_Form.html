@@ -12,8 +12,11 @@
   header h1 { font-size:17px; font-weight:600; }
   .badge { background:var(--amber); color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; }
   .panel { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:26px; margin:34px 16px; width:100%; max-width:460px; box-shadow:0 2px 10px rgba(16,24,40,.06); }
-  .tabs { display:flex; gap:8px; margin-bottom:20px; }
-  .tab { flex:1; text-align:center; padding:10px 8px; border:1px solid var(--border); border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; color:var(--muted); background:#f8fafc; }
+  .tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+  .tab { flex:1 1 30%; text-align:center; padding:10px 8px; border:1px solid var(--border); border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; color:var(--muted); background:#f8fafc; }
+  .ck { display:flex; gap:8px; align-items:center; font-size:13px; font-weight:500; color:var(--ink); text-transform:none; letter-spacing:0; margin:7px 0; }
+  .ck input { width:auto; }
+  textarea { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:9px; font-size:14px; background:#fff; color:var(--ink); min-height:80px; font-family:inherit; }
   .tab.active { background:var(--blue); color:#fff; border-color:var(--blue); }
   p.hint { font-size:12.5px; color:var(--muted); margin-bottom:6px; line-height:1.5; }
   label { display:block; font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin:14px 0 5px; }
@@ -37,11 +40,15 @@
     <div class="tab" id="tab-done">Service</div>
     <div class="tab" id="tab-move">Move</div>
     <div class="tab" id="tab-contacts">Contacts</div>
+    <div class="tab" id="tab-check">Weekly check</div>
+    <div class="tab" id="tab-incident">Incident</div>
   </div>
   <p class="hint" id="hint-booking">Garage confirmed a date? Enter it here — it shows on the dashboard and register so everyone knows it is booked.</p>
   <p class="hint hidden" id="hint-done">Work carried out? Record it — resets the service cycle, updates the register, and clears the booking.</p>
   <p class="hint hidden" id="hint-move">Vehicle now based at a different home? Move it here — the dashboard, register and At home tracking regroup it automatically.</p>
   <p class="hint hidden" id="hint-contacts">Manager or deputy changed at a home? Update the contact details here — alerts and booking emails use these.</p>
+  <p class="hint hidden" id="hint-check">Weekly walk-round check. Tick everything that is OK; anything unticked is recorded as needing attention.</p>
+  <p class="hint hidden" id="hint-incident">Damage, accident or near miss? Report it here — it is logged and a follow-up task is created automatically.</p>
   <form id="form">
     <div id="vehwrap">
     <label for="reg">Vehicle</label>
@@ -101,6 +108,38 @@
       <label for="cdepemail">Deputy email</label>
       <input type="text" id="cdepemail" placeholder="name@hearthomeliving.co.uk">
     </div>
+    <div id="fields-check" class="hidden">
+      <label for="ckby">Your name</label>
+      <input type="text" id="ckby" placeholder="Who did the check">
+      <label>Tick everything that is OK</label>
+      <div id="cklist">
+        <label class="ck"><input type="checkbox" value="Tyres (tread and pressure)"> Tyres (tread and pressure)</label>
+        <label class="ck"><input type="checkbox" value="Lights and indicators"> Lights and indicators</label>
+        <label class="ck"><input type="checkbox" value="Oil, coolant and washer fluid"> Oil, coolant and washer fluid</label>
+        <label class="ck"><input type="checkbox" value="Windscreen and wipers"> Windscreen and wipers</label>
+        <label class="ck"><input type="checkbox" value="Seatbelts and child locks"> Seatbelts and child locks</label>
+        <label class="ck"><input type="checkbox" value="Car seats fitted correctly"> Car seats fitted correctly</label>
+        <label class="ck"><input type="checkbox" value="First aid kit present"> First aid kit present</label>
+        <label class="ck"><input type="checkbox" value="Bodywork and interior (no new damage)"> Bodywork and interior (no new damage)</label>
+      </div>
+      <label for="cknotes">Notes (optional)</label>
+      <input type="text" id="cknotes" placeholder="Anything to report">
+    </div>
+    <div id="fields-incident" class="hidden">
+      <label for="inby">Your name</label>
+      <input type="text" id="inby" placeholder="Who is reporting">
+      <label for="indate">Date of incident</label>
+      <input type="date" id="indate">
+      <label for="insev">Severity</label>
+      <select id="insev">
+        <option value="">Select…</option>
+        <option>Minor</option>
+        <option>Moderate</option>
+        <option>Serious</option>
+      </select>
+      <label for="indesc">What happened</label>
+      <textarea id="indesc" placeholder="Describe the damage, accident or near miss. Include where it happened and whether anyone was in the vehicle."></textarea>
+    </div>
     <button type="submit" id="btn">Save booking</button>
   </form>
   <div id="msg"></div>
@@ -113,6 +152,8 @@ const BOOKING_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-booking-recor
 const MOVE_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-home-change';
 const PROFILES_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-home-profiles';
 const PROFILE_SAVE_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-home-profile';
+const CHECK_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-weekly-check';
+const INCIDENT_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-incident';
 
 let profiles = {};
 async function loadProfiles() {
@@ -192,20 +233,18 @@ document.getElementById('bdate').value = today;
 document.getElementById('bdate').min = today;
 document.getElementById('ddate').value = today;
 document.getElementById('ddate').max = today;
+document.getElementById('indate').value = today;
+document.getElementById('indate').max = today;
 
-const BTN_LABELS = { booking: 'Save booking', done: 'Record service', move: 'Move vehicle', contacts: 'Save contacts' };
+const BTN_LABELS = { booking: 'Save booking', done: 'Record service', move: 'Move vehicle', contacts: 'Save contacts', check: 'Save check', incident: 'Report incident' };
+const TAB_IDS = { booking: 'tab-booking', done: 'tab-done', move: 'tab-move', contacts: 'tab-contacts', check: 'tab-check', incident: 'tab-incident' };
 function setMode(m) {
   mode = m;
-  ['booking', 'done', 'move', 'contacts'].forEach(function(k) {
-    const tabId = k === 'booking' ? 'tab-booking' : (k === 'done' ? 'tab-done' : (k === 'move' ? 'tab-move' : 'tab-contacts'));
-    document.getElementById(tabId).className = 'tab' + (m === k ? ' active' : '');
-    const hintId = 'hint-' + k;
-    document.getElementById(hintId).className = 'hint' + (m === k ? '' : ' hidden');
+  Object.keys(TAB_IDS).forEach(function(k) {
+    document.getElementById(TAB_IDS[k]).className = 'tab' + (m === k ? ' active' : '');
+    document.getElementById('hint-' + k).className = 'hint' + (m === k ? '' : ' hidden');
+    document.getElementById('fields-' + k).className = m === k ? '' : 'hidden';
   });
-  document.getElementById('fields-booking').className = m === 'booking' ? '' : 'hidden';
-  document.getElementById('fields-done').className = m === 'done' ? '' : 'hidden';
-  document.getElementById('fields-move').className = m === 'move' ? '' : 'hidden';
-  document.getElementById('fields-contacts').className = m === 'contacts' ? '' : 'hidden';
   document.getElementById('vehwrap').className = m === 'contacts' ? 'hidden' : '';
   document.getElementById('btn').textContent = BTN_LABELS[m];
   const msg = document.getElementById('msg');
@@ -214,10 +253,9 @@ function setMode(m) {
   showCurrent();
   if (m === 'contacts') fillContacts();
 }
-document.getElementById('tab-booking').onclick = function() { setMode('booking'); };
-document.getElementById('tab-done').onclick = function() { setMode('done'); };
-document.getElementById('tab-move').onclick = function() { setMode('move'); };
-document.getElementById('tab-contacts').onclick = function() { setMode('contacts'); };
+Object.keys(TAB_IDS).forEach(function(k) {
+  document.getElementById(TAB_IDS[k]).onclick = function() { setMode(k); };
+});
 document.getElementById('chome').onchange = fillContacts;
 loadProfiles();
 
@@ -275,6 +313,28 @@ document.getElementById('form').onsubmit = async function(ev) {
     if (!home) return;
     url = MOVE_URL;
     body = 'reg=' + encodeURIComponent(reg) + '&home=' + encodeURIComponent(home);
+  } else if (mode === 'check') {
+    const by = document.getElementById('ckby').value.trim();
+    if (!by) { msg.className = 'err'; msg.textContent = 'Please enter your name.'; return; }
+    const boxes = Array.prototype.slice.call(document.querySelectorAll('#cklist input[type=checkbox]'));
+    const failed = boxes.filter(function(b) { return !b.checked; }).map(function(b) { return b.value; });
+    url = CHECK_URL;
+    body = 'reg=' + encodeURIComponent(reg) +
+      '&by=' + encodeURIComponent(by) +
+      '&allOk=' + (failed.length === 0 ? 'true' : 'false') +
+      '&failed=' + encodeURIComponent(failed.join(' | ')) +
+      '&notes=' + encodeURIComponent(document.getElementById('cknotes').value || '');
+  } else if (mode === 'incident') {
+    const by = document.getElementById('inby').value.trim();
+    const sev = document.getElementById('insev').value;
+    const desc = document.getElementById('indesc').value.trim();
+    if (!by || !sev || !desc) { msg.className = 'err'; msg.textContent = 'Name, severity and a description are all needed.'; return; }
+    url = INCIDENT_URL;
+    body = 'reg=' + encodeURIComponent(reg) +
+      '&by=' + encodeURIComponent(by) +
+      '&date=' + encodeURIComponent(document.getElementById('indate').value || '') +
+      '&severity=' + encodeURIComponent(sev) +
+      '&description=' + encodeURIComponent(desc);
   } else {
     const date = document.getElementById('ddate').value;
     if (!date) return;

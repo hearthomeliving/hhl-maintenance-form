@@ -74,6 +74,7 @@ const COLS = [
   { key: 'colour', label: 'Colour' },
   { key: 'home', label: 'Home' },
   { key: 'homeStatus', label: 'Home Status' },
+  { key: 'lastCheck', label: 'Weekly Check' },
   { key: 'status', label: 'Status' },
   { key: 'bookedIn', label: 'Booked In' },
   { key: 'motExpiry', label: 'MOT Expiry', type: 'due' },
@@ -161,6 +162,7 @@ function toRow(v) {
     colour: c.colour || '',
     home: c.home || '',
     homeStatus: v.homeStatus ? (v.homeStatus === 'AWAY' && v.homeDistanceMiles !== null && v.homeDistanceMiles !== undefined ? 'AWAY · ' + v.homeDistanceMiles + ' mi' : v.homeStatus) : '',
+    lastCheck: c.lastCheckDate ? String(c.lastCheckDate).slice(0, 10) : '',
     status: c.complianceStatus || 'NO DATA',
     bookedIn: (c.bookedDate && daysTo(c.bookedDate) >= -1) ? d10(c.bookedDate) + (c.bookedDetail ? ' — ' + c.bookedDetail : '') : '',
     motExpiry: c.motExpiry || null,
@@ -188,6 +190,12 @@ function toRow(v) {
 function cellHtml(row, col) {
   const val = row[col.key];
   if (col.key === 'insuranceExpiry' && !val && row.insuranceWho) return '<span>' + row.insuranceWho + '</span>';
+  if (col.key === 'lastCheck') {
+    if (!val) return '<span class="due-bad">never</span>';
+    const ago = Math.round((new Date() - new Date(val)) / 864e5);
+    if (ago > 7) return '<span class="due-bad">' + val + ' (' + ago + 'd ago)</span>';
+    return '<span class="due-ok">' + val + '</span>';
+  }
   if (col.key === 'projExcess') {
     if (val === null || val === undefined) return '<span class="muted">—</span>';
     if (val === 0) return '<span class="due-ok">£0</span>';
