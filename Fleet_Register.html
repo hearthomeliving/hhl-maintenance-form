@@ -84,6 +84,7 @@ let sortKey = 'reg', sortDir = 1;
 const COLS = [
   { key: 'reg', label: 'Reg' },
   { key: 'vehicle', label: 'Vehicle' },
+  { key: 'ownership', label: 'Owned / Leased' },
   { key: 'colour', label: 'Colour' },
   { key: 'motExpiry', label: 'MOT' },
   { key: 'booked', label: 'Booked' },
@@ -180,6 +181,10 @@ function toRow(v) {
 function cellHtml(row, col) {
   const val = row[col.key];
   if (col.key === 'reg') return '<span class="reg-cell">' + val + '</span>';
+  if (col.key === 'ownership') {
+    if (!val) return '<span class="muted">—</span>';
+    return val === 'Owned' ? '<span class="pill comp-none">OWNED</span>' : '<span class="pill comp-none">LEASED · ' + val + '</span>';
+  }
   if (col.key === 'colour') {
     if (!val) return '<span class="muted">—</span>';
     const cc = colourMap[String(val).toLowerCase()] || '#9ca3af';
