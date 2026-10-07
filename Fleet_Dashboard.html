@@ -20,6 +20,9 @@
   .header-stats { margin-left: auto; display: flex; gap: 18px; font-size: 12.5px; color: #b7c3d6; flex-wrap: wrap; }
   .header-stats b { color: #fff; font-size: 14px; }
   .header-stats b.alert { color: #fca5a5; }
+  #refreshbtn { background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 8px; padding: 6px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  #refreshbtn:hover { background: rgba(255,255,255,.25); }
+  #refreshbtn:disabled { opacity: .5; cursor: default; }
   #map { height: 32vh; min-height: 240px; width: auto; margin: 14px 20px 0; border-radius: 14px; border: 1px solid #d4dbe5; box-shadow: 0 2px 8px rgba(16,24,40,.08); }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(235px, 1fr)); gap: 10px; padding: 10px 20px 4px; }
   .card { background: var(--card); border: 1px solid #dde4ec; border-left: 5px solid #cbd5e1; border-radius: 12px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(16,24,40,.07); cursor: pointer; transition: box-shadow .15s, transform .15s; }
@@ -94,6 +97,7 @@
     <span>Compliance alerts: <b id="stat-comp">–</b></span>
     <span>Refreshed: <b id="stat-time">–</b></span>
   </div>
+  <button id="refreshbtn" title="Refresh now">↻ Refresh</button>
 </header>
 <div id="map"></div>
 <div id="loadmsg">Loading live fleet data…</div>
@@ -411,6 +415,15 @@ async function load() {
     setTimeout(load, 60000);
   }
 }
+
+document.getElementById('refreshbtn').onclick = async function() {
+  const b = this;
+  b.disabled = true;
+  b.textContent = 'Refreshing…';
+  await load();
+  b.disabled = false;
+  b.textContent = '↻ Refresh';
+};
 
 load();
 setInterval(load, 300000);
