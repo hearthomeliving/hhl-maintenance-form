@@ -863,16 +863,6 @@ const SOP = {
     ],
     ref: 'Manual section 6.29'
   },
-  'Internet or Wi-Fi': {
-    gates: [
-      'Router plugged in and switched on',
-      'Cables connected',
-      'Other devices can connect',
-      'Router restarted (off for 30 seconds, then on)'
-    ],
-    urgent: [],
-    ref: 'Manual section 6.26 — if unresolved, BitTech IT (support@bittechit.co.uk).'
-  },
   'Garden or external': {
     gates: [
       'Issue identified',
@@ -890,6 +880,74 @@ const SOP = {
     ],
     urgent: [],
     ref: 'Manual section 6.27'
+  },
+  'Extractor fan': {
+    gates: [
+      'Fan switch or pull-cord checked',
+      'Fuse board checked for a tripped circuit',
+      'Fan grille checked for dust or grease blockage',
+      'Confirmed it is the fan, not the light on the same switch'
+    ],
+    urgent: [],
+    ref: 'Manual section 6.11 (appliances)'
+  },
+  'Vehicle or fleet': {
+    gates: [
+      'Vehicle registration and home noted',
+      'Warning light or fault described',
+      'Mileage and current location checked',
+      'If not safe to drive, vehicle taken out of use'
+    ],
+    urgent: [
+      'Brakes, steering, tyres or lights unsafe — do not drive'
+    ],
+    ref: 'Log it on the Adrian Fleet board and tell the office.'
+  },
+  'Walls, ceilings or paintwork': {
+    gates: [
+      'Size and location of the damage noted',
+      'Any damp, stain or leak from above ruled out',
+      'Loose plaster or flaking paint made safe',
+      'Photo taken if possible'
+    ],
+    urgent: [
+      'Ceiling bulging, sagging or at risk of collapse'
+    ],
+    ref: 'Manual section 6.20 (fabric and decoration)'
+  },
+  'Gutter, drain or roof': {
+    gates: [
+      'Problem spot noted (gutter, downpipe, roof or outside drain)',
+      'Checked from the ground only, no ladders or roof access',
+      'Overflow or blockage described',
+      'Any inside leak or damp noted'
+    ],
+    urgent: [
+      'Water coming through the ceiling or a roof leak into the house'
+    ],
+    ref: 'Manual section 6.22 (external and roofing)'
+  },
+  'Window restrictor': {
+    gates: [
+      'Window made safe and not left open',
+      'Children moved away if the restrictor has failed',
+      'Window and room noted',
+      'Checked whether it is loose, missing or broken'
+    ],
+    urgent: [
+      'Restrictor failed or missing on an upper-floor window a child can reach'
+    ],
+    ref: 'Manual section 6.23 (window safety) — treat as a safeguarding priority'
+  },
+  'Flooring or carpet': {
+    gates: [
+      'Trip hazard made safe or marked off',
+      'Room and floor type noted (carpet, laminate, lino, tiles)',
+      'Any water or leak causing it ruled out',
+      'Loose edges, nails or tiles made safe'
+    ],
+    urgent: [],
+    ref: 'Manual section 6.19 (flooring)'
   },
   'Other (not listed above)': {
     gates: [
@@ -973,8 +1031,8 @@ const SYNONYM_MAP = {
   'path': ['Garden or external'],
   'yard': ['Garden or external'],
   'shed': ['Garden or external'],
-  'gutter': ['Garden or external'],
-  'guttering': ['Garden or external'],
+  'gutter': ['Gutter, drain or roof'],
+  'guttering': ['Gutter, drain or roof'],
   'drainpipe': ['Garden or external'],
   'overgrown': ['Garden or external'],
   'rodent': ['Pests (insects, rodents, wasps)'],
@@ -994,9 +1052,6 @@ const SYNONYM_MAP = {
   'spider': ['Pests (insects, rodents, wasps)'],
   'spiders': ['Pests (insects, rodents, wasps)'],
   'roach': ['Pests (insects, rodents, wasps)'],
-  'connection': ['Internet or Wi-Fi'],
-  'ethernet': ['Internet or Wi-Fi'],
-  'wireless': ['Internet or Wi-Fi'],
   'moisture': ['Damp or mould'],
   'grill': ['Oven (kitchen)', 'Hob (kitchen)'],
   'door': ['Front door or lock', 'Internal door', 'Lost keys or lock'],
@@ -1107,12 +1162,60 @@ const SYNONYM_MAP = {
   'ant': ['Pests (insects, rodents, wasps)'],
   'ants': ['Pests (insects, rodents, wasps)'],
   'cockroach': ['Pests (insects, rodents, wasps)'],
-  'wifi': ['Internet or Wi-Fi'],
-  'wi-fi': ['Internet or Wi-Fi'],
-  'internet': ['Internet or Wi-Fi'],
-  'router': ['Internet or Wi-Fi'],
-  'network': ['Internet or Wi-Fi'],
-  'broadband': ['Internet or Wi-Fi'],
+  'extractor': ['Extractor fan'],
+  'extractor fan': ['Extractor fan'],
+  'fan': ['Extractor fan'],
+  'bathroom fan': ['Extractor fan'],
+  'kitchen fan': ['Extractor fan'],
+  'vent': ['Extractor fan'],
+  'vehicle': ['Vehicle or fleet'],
+  'car': ['Vehicle or fleet'],
+  'van': ['Vehicle or fleet'],
+  'minibus': ['Vehicle or fleet'],
+  'fleet': ['Vehicle or fleet'],
+  'mot': ['Vehicle or fleet'],
+  'tyre': ['Vehicle or fleet'],
+  'tyres': ['Vehicle or fleet'],
+  'paint': ['Walls, ceilings or paintwork'],
+  'painting': ['Walls, ceilings or paintwork'],
+  'paintwork': ['Walls, ceilings or paintwork'],
+  'wall': ['Walls, ceilings or paintwork'],
+  'walls': ['Walls, ceilings or paintwork'],
+  'ceiling': ['Walls, ceilings or paintwork'],
+  'ceilings': ['Walls, ceilings or paintwork'],
+  'plaster': ['Walls, ceilings or paintwork'],
+  'plastering': ['Walls, ceilings or paintwork'],
+  'crack': ['Walls, ceilings or paintwork'],
+  'cracks': ['Walls, ceilings or paintwork'],
+  'decorating': ['Walls, ceilings or paintwork'],
+  'decoration': ['Walls, ceilings or paintwork'],
+  'scuff': ['Walls, ceilings or paintwork'],
+  'hole in wall': ['Walls, ceilings or paintwork'],
+  'downpipe': ['Gutter, drain or roof'],
+  'roof': ['Gutter, drain or roof'],
+  'roofing': ['Gutter, drain or roof'],
+  'slate': ['Gutter, drain or roof'],
+  'manhole': ['Gutter, drain or roof'],
+  'drainage': ['Gutter, drain or roof'],
+  'soffit': ['Gutter, drain or roof'],
+  'fascia': ['Gutter, drain or roof'],
+  'restrictor': ['Window restrictor'],
+  'restrictors': ['Window restrictor'],
+  'window restrictor': ['Window restrictor'],
+  'window lock': ['Window restrictor'],
+  'window catch': ['Window restrictor'],
+  'window stay': ['Window restrictor'],
+  'floor': ['Flooring or carpet'],
+  'flooring': ['Flooring or carpet'],
+  'carpet': ['Flooring or carpet'],
+  'carpets': ['Flooring or carpet'],
+  'laminate': ['Flooring or carpet'],
+  'lino': ['Flooring or carpet'],
+  'linoleum': ['Flooring or carpet'],
+  'vinyl': ['Flooring or carpet'],
+  'floorboard': ['Flooring or carpet'],
+  'floorboards': ['Flooring or carpet'],
+  'rug': ['Flooring or carpet'],
   'garden': ['Garden or external', 'Fence or gate damage'],
   'outside': ['Garden or external'],
   'driveway': ['Garden or external'],
