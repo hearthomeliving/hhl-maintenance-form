@@ -1,0 +1,228 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Maintenance Department Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  /* Dark department board, live from the maint-data and cert-data APIs. */
+  :root{
+    --bg:#0b1016; --panel:#141b24; --panel-2:#1b242f;
+    --fg:#f1f5f9; --muted:#aab6c4; --faint:#73818f;
+    --border:#263038; --border-2:#394754;
+    --accent:#2dd4bf; --accent-ink:#a7f3ea;
+    --crit:#fb7185; --high:#60a5fa; --med:#fbbf24; --low:#94a3b8; --ok:#4ade80; --warn:#fbbf24;
+    --f:"Figtree",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#122130 0%,var(--bg) 60%);color:var(--fg);font-family:var(--f);font-size:15.5px;line-height:1.5}
+  .wrap{max-width:1200px;margin:0 auto;padding:22px 18px 56px}
+  header.hd{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+  h1{font-size:1.75rem;font-weight:900;margin:0;letter-spacing:-.025em}
+  .sub{color:var(--muted);font-size:.95rem;margin:3px 0 0}
+  .stamp{display:flex;align-items:center;gap:8px;font-size:.76rem;font-family:var(--mono);color:var(--faint)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px rgba(74,222,128,.15)}
+  .note{display:flex;gap:11px;background:linear-gradient(90deg,rgba(251,191,36,.10),rgba(251,191,36,.03));border:1px solid rgba(251,191,36,.28);border-radius:12px;padding:12px 15px;margin:18px 0 6px;font-size:.9rem;color:#f4e4bd}
+  .note .ic{color:var(--warn);font-weight:800}
+  .note b{color:#ffe9b8}
+  .sec{margin-top:26px}
+  .sec-h{display:flex;align-items:center;gap:10px;margin:0 0 13px}
+  .sec-h span{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.11em;color:var(--muted)}
+  .sec-h .bar{width:22px;height:3px;border-radius:3px;background:var(--accent)}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 18px;position:relative;overflow:hidden}
+  .kpi::after{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--accent);opacity:.9}
+  .kpi.crit::after{background:var(--crit)} .kpi.warn::after{background:var(--warn)} .kpi.blue::after{background:var(--high)}
+  .kpi .n{font-family:var(--mono);font-size:2.1rem;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+  .kpi.crit .n{color:var(--crit)} .kpi.warn .n{color:var(--warn)} .kpi.blue .n{color:var(--high)}
+  .kpi .l{color:var(--muted);font-size:.86rem;margin-top:8px;font-weight:500}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:17px 19px;min-width:0;box-shadow:0 1px 0 rgba(255,255,255,.02) inset}
+  .card h3{font-size:1.02rem;font-weight:700;margin:0 0 3px;letter-spacing:-.01em}
+  .card .cap{color:var(--faint);font-size:.8rem;margin:0 0 12px}
+  .chartbox{position:relative;height:250px}
+  .chartbox.list{height:390px}
+  .span2{grid-column:1 / -1}
+  table{width:100%;border-collapse:collapse;font-size:.9rem}
+  th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:700;padding:9px 12px;border-bottom:1px solid var(--border-2)}
+  td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--panel-2)}
+  td .nm{font-weight:600}
+  .n2{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;font-weight:600}
+  .trade{color:var(--muted)}
+  .st{font-weight:700} .st.crit{color:var(--crit)} .st.warn{color:var(--warn)}
+  .foot{margin-top:28px;color:var(--faint);font-size:.82rem;border-top:1px solid var(--border);padding-top:14px;line-height:1.6}
+  .foot code{color:var(--accent-ink);font-family:var(--mono)}
+  @media (max-width:880px){ .kpis{grid-template-columns:repeat(2,1fr)} .grid{grid-template-columns:1fr} h1{font-size:1.5rem} }
+</style>
+
+<div class="wrap">
+  <header class="hd">
+    <div>
+      <h1>Maintenance Department</h1>
+      <p class="sub">A live read of every list in the department</p>
+    </div>
+    <div class="stamp"><span class="dot"></span><span id="stamp">loading&hellip;</span></div>
+  </header>
+
+  <div class="note"><span class="ic">&#9888;</span><div id="note">Loading live data from ClickUp&hellip;</div></div>
+
+  <div class="sec">
+    <div class="sec-h"><span class="bar"></span><span>At a glance</span></div>
+    <div class="kpis" id="kpis"></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-h"><span class="bar"></span><span>Workload across the department</span></div>
+    <div class="grid">
+      <div class="card span2">
+        <h3>Open tasks by list</h3><p class="cap">All department lists, most to fewest (certificates from the sandbox)</p>
+        <div class="chartbox list"><canvas id="cList"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Non-routine jobs</h3><p class="cap">Current status of open jobs</p>
+        <div class="chartbox"><canvas id="cNR"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Vehicle tasks</h3><p class="cap">Open across the fleet</p>
+        <div class="chartbox"><canvas id="cVeh"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-h"><span class="bar"></span><span>Safety &amp; compliance</span></div>
+    <div class="grid">
+      <div class="card">
+        <h3>Emergencies by home</h3><p class="cap">Logged in the Emergencies list</p>
+        <div class="chartbox"><canvas id="cEmerg"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Certificates by status</h3><p class="cap">From the Property Certificates sandbox</p>
+        <div class="chartbox"><canvas id="cCert"></canvas></div>
+      </div>
+      <div class="card span2">
+        <h3>Certificates needing attention</h3><p class="cap" id="certCap"></p>
+        <table id="certAtt"><thead><tr><th>Home</th><th>Certificate</th><th>Status</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-h"><span class="bar"></span><span>Contractors &amp; reference</span></div>
+    <div class="grid">
+      <div class="card span2">
+        <h3>Approved contractor directory</h3><p class="cap" id="contrCap">Vetted contractors on file</p>
+        <table id="contractors"><thead><tr><th>Contractor</th><th>Trade</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="card span2">
+        <h3>Reference lists</h3><p class="cap">Supporting lists the pipeline reads from</p>
+        <table id="refs"><thead><tr><th>List</th><th>What it holds</th><th class="n2">Items</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script>
+const MAINT_URL="https://ruthbloch.app.n8n.cloud/webhook/maint-data";
+const CERT_URL="https://ruthbloch.app.n8n.cloud/webhook/cert-data";
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+Chart.register(ChartDataLabels);
+Chart.defaults.color=css("--muted"); Chart.defaults.font.family="Figtree, sans-serif"; Chart.defaults.font.size=13;
+Chart.defaults.plugins.legend.display=false;
+const GRID="rgba(255,255,255,.06)";
+const dl=o=>Object.assign({color:css("--fg"),font:{weight:700,size:13}},o);
+const esc=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const toArr=o=>Object.keys(o||{}).map(k=>({k:k,v:o[k]}));
+const statusColour=k=>{k=(k||"").toLowerCase();
+  if(k.indexOf("open")>=0||k.indexOf("active")>=0)return "--high";
+  if(k.indexOf("miss")>=0||k.indexOf("await")>=0||k.indexOf("soon")>=0||k.indexOf("sent")>=0)return "--warn";
+  if(k.indexOf("escal")>=0||k.indexOf("overdue")>=0)return "--crit";
+  if(k.indexOf("complete")>=0||k.indexOf("done")>=0||k.indexOf("confirm")>=0)return "--ok";
+  return "--low";};
+
+function buildModel(m,c){
+  const k=m.counts||{};
+  const certs=c.certificates||[];
+  const faults=(c.faults||[]).filter(f=>!f.closed);
+  const sc=s=>certs.filter(x=>x.state===s).length;
+  const att=certs.filter(x=>x.state==="overdue"||x.state==="due-soon")
+    .sort((a,b)=>(a.daysLeft||0)-(b.daysLeft||0))
+    .map(x=>{const d=x.daysLeft; let s,cls;
+      if(x.state==="overdue"){cls="crit";const n=Math.abs(d);s="Overdue "+n+" day"+(n===1?"":"s");}
+      else {cls=d<=7?"crit":"warn"; s=d<=0?"Due today":"Due in "+d+" days";}
+      return {h:x.home,t:x.type,s:s,cls:cls};});
+  return {
+    generated:m.generated||Date.now(),
+    byList:[{k:"Routine checklist",v:k.routine||0},{k:"Property Certificates*",v:certs.length},{k:"Approved Contractors",v:k.contractors||0},{k:"Emergencies",v:k.emergencies||0},{k:"Non-routine jobs",v:(m.nr&&m.nr.open)||0},{k:"Home Managers",v:k.homeManagers||0},{k:"On-Call Rota",v:k.onCall||0},{k:"Vehicles",v:k.vehicles||0},{k:"Test Bin",v:k.testBin||0},{k:"Ratings log",v:k.ratings||0},{k:"Settings",v:k.settings||0},{k:"IT Maintenance",v:k.it||0}],
+    kpis:[{n:(m.nr&&m.nr.open)||0,l:"Non-routine jobs open"},{n:k.emergencies||0,l:"Emergencies logged",cls:"crit"},{n:certs.length,l:"Certificates tracked",cls:"blue"},{n:sc("overdue")+sc("due-soon"),l:"Certs overdue / due soon",cls:"warn"},{n:k.vehicles||0,l:"Vehicle tasks open"},{n:k.routine||0,l:"Routine checklist items"},{n:k.contractors||0,l:"Approved contractors",cls:"blue"},{n:k.onCall||0,l:"On-call weeks set"}],
+    nr:toArr(m.nr&&m.nr.byStatus).map(e=>({k:e.k,v:e.v,c:statusColour(e.k)})),
+    emerg:toArr(m.emergByHome),
+    veh:toArr(m.vehByStatus).map(e=>({k:e.k,v:e.v,c:statusColour(e.k)})),
+    certStatus:[{k:"In date",v:sc("ok"),c:"--ok"},{k:"Due soon",v:sc("due-soon"),c:"--warn"},{k:"Overdue",v:sc("overdue"),c:"--crit"}],
+    certAttention:att,
+    certActions:{open:faults.length,high:faults.filter(f=>f.severity==="high").length},
+    contractors:(m.contractors||[]).map(x=>({n:x.name,t:x.trade||""})),
+    comp:m.contractorCompliance||{total:0,insuranceOk:0,insuranceExpiring30:0,insuranceExpiredOrMissing:0},
+    refs:[{k:"Home Managers",d:"Manager + deputy contacts per home",v:k.homeManagers||0},{k:"On-Call Rota",d:"Weekly on-call cover",v:k.onCall||0},{k:"Ratings log",d:"Contractor ratings submitted",v:k.ratings||0},{k:"Maintenance Settings",d:"Who gets chase / compliance emails",v:k.settings||0},{k:"Test Bin",d:"Self-test entries (safe to clear)",v:k.testBin||0}]
+  };
+}
+
+function mkBarH(id,rows,color){
+  new Chart(document.getElementById(id),{type:"bar",
+    data:{labels:rows.map(r=>r.k),datasets:[{data:rows.map(r=>r.v),backgroundColor:color||rows.map(r=>css(r.c||"--accent")),borderRadius:7,barThickness:color?20:26}]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,layout:{padding:{right:26}},
+      scales:{x:{grid:{color:GRID},beginAtZero:true,ticks:{precision:0}},y:{grid:{display:false},ticks:{font:{size:13,weight:600},color:css("--fg")}}},
+      plugins:{datalabels:dl({anchor:"end",align:"end",formatter:v=>v})}}});
+}
+function mkBarV(id,rows,color){
+  new Chart(document.getElementById(id),{type:"bar",
+    data:{labels:rows.map(r=>r.k),datasets:[{data:rows.map(r=>r.v),backgroundColor:color,borderRadius:7,maxBarThickness:48}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:18}},
+      scales:{x:{grid:{display:false},ticks:{color:css("--fg"),font:{weight:600}}},y:{grid:{color:GRID},beginAtZero:true,ticks:{precision:0}}},
+      plugins:{datalabels:dl({anchor:"end",align:"top",formatter:v=>v})}}});
+}
+function doughnut(id,rows){
+  new Chart(document.getElementById(id),{type:"doughnut",
+    data:{labels:rows.map(r=>r.k),datasets:[{data:rows.map(r=>r.v),backgroundColor:rows.map(r=>css(r.c||"--accent")),borderColor:css("--panel"),borderWidth:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"58%",
+      plugins:{legend:{display:true,position:"right",labels:{boxWidth:14,boxHeight:14,padding:14,color:css("--fg"),font:{size:13.5}}},
+        datalabels:dl({color:"#0b1016",formatter:v=>v,font:{weight:800,size:15}})}}});
+}
+
+function render(DATA){
+  document.getElementById("kpis").innerHTML=DATA.kpis.map(i=>'<div class="kpi '+(i.cls||"")+'"><div class="n">'+i.n+'</div><div class="l">'+i.l+'</div></div>').join("");
+  mkBarH("cList",DATA.byList.slice().sort((a,b)=>b.v-a.v),css("--accent"));
+  doughnut("cNR",DATA.nr);
+  doughnut("cCert",DATA.certStatus);
+  mkBarV("cEmerg",DATA.emerg,css("--crit"));
+  mkBarH("cVeh",DATA.veh,null);
+  document.querySelector("#contractors tbody").innerHTML=DATA.contractors.map(c=>'<tr><td class="nm">'+esc(c.n)+'</td><td class="trade">'+esc(c.t)+'</td></tr>').join("")||'<tr><td colspan="2" class="trade">None on file</td></tr>';
+  document.querySelector("#refs tbody").innerHTML=DATA.refs.map(r=>'<tr><td class="nm">'+r.k+'</td><td class="trade">'+r.d+'</td><td class="n2">'+r.v+'</td></tr>').join("");
+  document.querySelector("#certAtt tbody").innerHTML=DATA.certAttention.map(c=>'<tr><td class="nm">'+esc(c.h)+'</td><td>'+esc(c.t)+'</td><td class="st '+c.cls+'">'+esc(c.s)+'</td></tr>').join("")||'<tr><td colspan="3" class="trade">All certificates in date</td></tr>';
+  document.getElementById("certCap").textContent=DATA.certActions.open+" open actions from certificates ("+DATA.certActions.high+" high), mostly from recent fire-risk assessments.";
+  const comp=DATA.comp;
+  document.getElementById("contrCap").textContent=comp.total+" vetted contractors · insurance: "+comp.insuranceOk+" in date, "+comp.insuranceExpiring30+" expiring soon, "+comp.insuranceExpiredOrMissing+" missing or expired";
+  const d=new Date(DATA.generated);
+  document.getElementById("stamp").innerHTML="live from ClickUp &middot; "+d.toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  document.getElementById("note").innerHTML="<b>Live.</b> Read straight from the Maintenance Department lists; property certificates come from the Property Certificates sandbox. Some entries are still pipeline test data as the system beds in. Read-only, nothing is written back.";
+  document.getElementById("foot").innerHTML="Live from ClickUp &mdash; department lists via the <code>maint-data</code> API and the Property Certificates sandbox via <code>cert-data</code>. Figures refresh each time the page loads.";
+}
+
+function fail(msg){
+  document.getElementById("stamp").textContent="offline";
+  document.getElementById("note").innerHTML='<b style="color:var(--crit)">Could not load live data.</b> '+esc(msg)+'. This page reads the maint-data and cert-data webhooks; check they are active in n8n.';
+}
+Promise.all([
+  fetch(MAINT_URL).then(r=>{if(!r.ok)throw new Error("maint-data "+r.status);return r.json();}),
+  fetch(CERT_URL).then(r=>{if(!r.ok)throw new Error("cert-data "+r.status);return r.json();})
+]).then(res=>render(buildModel(res[0],res[1]))).catch(e=>fail(e&&e.message?e.message:"network error"));
+</script>
