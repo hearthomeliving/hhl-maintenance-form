@@ -93,6 +93,9 @@
   .home-tabs button{font:inherit;font-size:.82rem;font-weight:600;color:var(--muted);background:var(--panel-2);border:1px solid var(--border-2);border-radius:999px;padding:5px 13px;cursor:pointer}
   .home-tabs button.on{background:var(--accent);color:#07201d;border-color:var(--accent)}
   .home-tabs button:disabled{opacity:.4;cursor:not-allowed}
+  .rt-filters{display:flex;flex-wrap:wrap;gap:12px 26px;margin:2px 0 10px}
+  .filt{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .flabel{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);font-weight:700}
   .freq-group{margin-top:15px}
   .freq-group h4{font-size:.79rem;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-ink);margin:0 0 5px;font-weight:700}
   .rcheck{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border)}
@@ -141,9 +144,10 @@
       <div class="legend" id="rtLegend"></div>
     </div>
     <div class="card span2" style="margin-top:16px">
-      <div class="rt-detail-head">
-        <h3 id="rtDetailTitle">Routine checks</h3>
-        <div class="home-tabs" id="rtTabs"></div>
+      <h3 id="rtDetailTitle" style="margin:0 0 12px">Routine checks</h3>
+      <div class="rt-filters">
+        <div class="filt"><span class="flabel">House</span><div class="home-tabs" id="rtTabs"></div></div>
+        <div class="filt"><span class="flabel">Frequency</span><div class="home-tabs" id="rtFreq"></div></div>
       </div>
       <div id="rtDetail"></div>
     </div>
@@ -250,18 +254,20 @@ function pillText(x){const d=x.daysLeft;
   if(x.state==="upcoming")return "Due in "+d+"d";
   if(x.state==="missing-report")return "Report missing";
   return "Not scheduled";}
-let RIDX={}, RGROUPS=[];
-function selectHome(h){
-  document.querySelectorAll("#rtTabs button").forEach(b=>b.classList.toggle("on",b.getAttribute("data-h")===h));
-  document.getElementById("rtDetailTitle").textContent=h+" — routine checks";
-  const home=RIDX[h], box=document.getElementById("rtDetail");
+let RIDX={}, RGROUPS=[], RHOME=null, RFREQ="All";
+function selectHome(h){RHOME=h;document.querySelectorAll("#rtTabs button").forEach(b=>b.classList.toggle("on",b.getAttribute("data-h")===h));renderDetail();}
+function selectFreq(f){RFREQ=f;document.querySelectorAll("#rtFreq button").forEach(b=>b.classList.toggle("on",b.getAttribute("data-f")===f));renderDetail();}
+function renderDetail(){
+  const box=document.getElementById("rtDetail"), home=RIDX[RHOME];
+  document.getElementById("rtDetailTitle").textContent=(RHOME||"")+" — routine checks"+(RFREQ!=="All"?" · "+RFREQ:"");
   if(!home){box.innerHTML="<p class='cap'>No routine checks loaded for this home yet.</p>";return;}
+  const groups=RFREQ==="All"?RGROUPS:[RFREQ];
   let html="";
-  RGROUPS.forEach(g=>{const checks=home[g];if(!checks||!checks.length)return;
+  groups.forEach(g=>{const checks=home[g];if(!checks||!checks.length)return;
     html+="<div class='freq-group'><h4>"+esc(g)+" <span style='color:var(--faint);font-weight:600'>("+checks.length+")</span></h4>";
     checks.forEach(x=>{html+="<div class='rcheck'><div class='rn'>"+esc(x.name)+"</div>"+(x.type?"<span class='rty'>"+esc(x.type)+"</span>":"")+"<span class='pill "+x.state+"'>"+pillText(x)+"</span></div>";});
     html+="</div>";});
-  box.innerHTML=html;
+  box.innerHTML=html||"<p class='cap'>No "+(RFREQ!=="All"?esc(RFREQ)+" ":"")+"checks loaded for this home.</p>";
 }
 function renderRoutine(R){
   R=R||[];
@@ -282,6 +288,8 @@ function renderRoutine(R){
   document.querySelectorAll("#rtMatrix td.cell:not(.empty)").forEach(td=>td.addEventListener("click",()=>selectHome(td.getAttribute("data-h"))));
   document.getElementById("rtTabs").innerHTML=HOMES.map(h=>"<button data-h='"+esc(h)+"' "+(RIDX[h]?"":"disabled")+">"+esc(h)+(RIDX[h]?"":" · none")+"</button>").join("");
   document.querySelectorAll("#rtTabs button").forEach(b=>b.addEventListener("click",()=>{if(!b.disabled)selectHome(b.getAttribute("data-h"));}));
+  document.getElementById("rtFreq").innerHTML=["All"].concat(RGROUPS).map(f=>"<button data-f='"+esc(f)+"'>"+esc(f)+"</button>").join("");
+  document.querySelectorAll("#rtFreq button").forEach(b=>b.addEventListener("click",()=>selectFreq(b.getAttribute("data-f"))));
   const by=k=>R.filter(x=>x.state===k).length;
   const homesWith=HOMES.filter(h=>RIDX[h]).length;
   const kp=[{n:homesWith+" / "+CORE_HOMES.length,l:"Homes with checks"},{n:R.length,l:"Routine checks"},{n:by("complete"),l:"Complete",c:"ok"},{n:by("overdue"),l:"Overdue",c:"crit"},{n:by("due-soon")+by("missing-report"),l:"Due soon",c:"warn"},{n:by("unscheduled"),l:"Not scheduled",c:"low"}];
@@ -289,6 +297,8 @@ function renderRoutine(R){
   const miss=CORE_HOMES.filter(h=>!RIDX[h]);
   document.getElementById("rtNote").innerHTML="<b>How to read this.</b> Routine checks are loaded for "+homesWith+" of "+CORE_HOMES.length+" homes"+(miss.length?" (not yet set up: "+esc(miss.join(", "))+")":"")+". "+by("overdue")+" overdue, "+by("complete")+" complete, and "+by("unscheduled")+" with no due date yet, so those cannot be tracked for timing until a due date or a recurring schedule is added in ClickUp.";
   document.getElementById("rtLegend").innerHTML=[["crit","Overdue"],["warn","Due soon"],["high","Scheduled / on track"],["ok","All done"],["low","Not scheduled"]].map(x=>"<span><i class='l-"+x[0]+"'></i>"+x[1]+"</span>").join("");
+  RFREQ="All";
+  document.querySelectorAll("#rtFreq button").forEach(b=>b.classList.toggle("on",b.getAttribute("data-f")==="All"));
   const first=HOMES.filter(h=>RIDX[h])[0]||HOMES[0];
   selectHome(first);
 }
