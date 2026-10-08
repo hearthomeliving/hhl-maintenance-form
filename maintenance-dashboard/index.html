@@ -8,7 +8,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <style>
-  /* Dark department board, live from the maint-data and cert-data APIs. */
   :root{
     --bg:#0b1016; --panel:#141b24; --panel-2:#1b242f;
     --fg:#f1f5f9; --muted:#aab6c4; --faint:#73818f;
@@ -52,14 +51,61 @@
   th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:700;padding:9px 12px;border-bottom:1px solid var(--border-2)}
   td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
   tbody tr:last-child td{border-bottom:none}
-  tbody tr:hover{background:var(--panel-2)}
+  .data-table tbody tr:hover{background:var(--panel-2)}
   td .nm{font-weight:600}
   .n2{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;font-weight:600}
   .trade{color:var(--muted)}
   .st{font-weight:700} .st.crit{color:var(--crit)} .st.warn{color:var(--warn)}
   .foot{margin-top:28px;color:var(--faint);font-size:.82rem;border-top:1px solid var(--border);padding-top:14px;line-height:1.6}
   .foot code{color:var(--accent-ink);font-family:var(--mono)}
-  @media (max-width:880px){ .kpis{grid-template-columns:repeat(2,1fr)} .grid{grid-template-columns:1fr} h1{font-size:1.5rem} }
+
+  /* Routine maintenance by home */
+  .note2{background:linear-gradient(90deg,rgba(96,165,250,.10),rgba(96,165,250,.03));border:1px solid rgba(96,165,250,.28);border-radius:12px;padding:11px 15px;margin:0 0 14px;font-size:.89rem;color:#d7e6fb}
+  .note2 b{color:#eaf2ff}
+  .rt-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:0 0 4px}
+  .rt-kpis .k{background:var(--panel);border:1px solid var(--border);border-radius:13px;padding:12px 14px;position:relative;overflow:hidden}
+  .rt-kpis .k .n{font-family:var(--mono);font-size:1.45rem;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+  .rt-kpis .k .l{color:var(--muted);font-size:.75rem;margin-top:6px;font-weight:500}
+  .rt-kpis .k.crit .n{color:var(--crit)} .rt-kpis .k.warn .n{color:var(--warn)} .rt-kpis .k.low .n{color:var(--low)} .rt-kpis .k.ok .n{color:var(--ok)}
+  .matrix-wrap{overflow-x:auto;padding-bottom:4px}
+  table.matrix{border-collapse:separate;border-spacing:6px;width:100%}
+  table.matrix th{font-size:.73rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;padding:4px 6px;text-align:center;border:none}
+  table.matrix th.h{text-align:left;padding-left:4px}
+  table.matrix td{border:none;padding:0}
+  table.matrix td.home{font-weight:700;white-space:nowrap;padding:0 10px 0 4px}
+  td.cell{text-align:center;border-radius:11px;padding:9px 6px;cursor:pointer;min-width:94px;border:1px solid var(--border);transition:transform .08s}
+  td.cell:hover{transform:translateY(-2px)}
+  td.cell .cn{font-family:var(--mono);font-size:1.22rem;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+  td.cell .cl{font-size:.71rem;margin-top:4px;font-weight:600;opacity:.95}
+  td.cell.empty{color:var(--faint);cursor:default;background:transparent;border-style:dashed}
+  td.cell.empty:hover{transform:none}
+  td.cell.c-crit{background:rgba(251,113,133,.15);border-color:rgba(251,113,133,.42)} .cn.t-crit{color:#fda4af}
+  td.cell.c-warn{background:rgba(251,191,36,.14);border-color:rgba(251,191,36,.42)} .cn.t-warn{color:#fcd34d}
+  td.cell.c-ok{background:rgba(74,222,128,.14);border-color:rgba(74,222,128,.42)} .cn.t-ok{color:#86efac}
+  td.cell.c-high{background:rgba(96,165,250,.14);border-color:rgba(96,165,250,.42)} .cn.t-high{color:#93c5fd}
+  td.cell.c-low{background:rgba(148,163,184,.10);border-color:var(--border-2)} .cn.t-low{color:#cbd5e1}
+  .legend{display:flex;flex-wrap:wrap;gap:15px;margin-top:13px;font-size:.78rem;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .legend i.l-crit{background:#fb7185}.legend i.l-warn{background:#fbbf24}.legend i.l-high{background:#60a5fa}.legend i.l-ok{background:#4ade80}.legend i.l-low{background:#94a3b8}
+  .rt-detail-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+  .home-tabs{display:flex;flex-wrap:wrap;gap:7px}
+  .home-tabs button{font:inherit;font-size:.82rem;font-weight:600;color:var(--muted);background:var(--panel-2);border:1px solid var(--border-2);border-radius:999px;padding:5px 13px;cursor:pointer}
+  .home-tabs button.on{background:var(--accent);color:#07201d;border-color:var(--accent)}
+  .home-tabs button:disabled{opacity:.4;cursor:not-allowed}
+  .freq-group{margin-top:15px}
+  .freq-group h4{font-size:.79rem;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-ink);margin:0 0 5px;font-weight:700}
+  .rcheck{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border)}
+  .rcheck:last-child{border-bottom:none}
+  .rcheck .rn{flex:1;min-width:0;font-size:.9rem}
+  .rcheck .rty{font-size:.71rem;color:var(--muted);background:var(--panel-2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;white-space:nowrap}
+  .pill{font-size:.75rem;font-weight:700;border-radius:999px;padding:3px 11px;white-space:nowrap;min-width:96px;text-align:center}
+  .pill.complete{background:rgba(74,222,128,.16);color:#86efac}
+  .pill.overdue{background:rgba(251,113,133,.16);color:#fda4af}
+  .pill.due-soon,.pill.missing-report{background:rgba(251,191,36,.16);color:#fcd34d}
+  .pill.upcoming{background:rgba(96,165,250,.16);color:#93c5fd}
+  .pill.unscheduled{background:rgba(148,163,184,.14);color:#cbd5e1}
+  @media (max-width:880px){ .kpis{grid-template-columns:repeat(2,1fr)} .grid{grid-template-columns:1fr} h1{font-size:1.5rem} .rt-kpis{grid-template-columns:repeat(3,1fr)} }
 </style>
 
 <div class="wrap">
@@ -76,6 +122,24 @@
   <div class="sec">
     <div class="sec-h"><span class="bar"></span><span>At a glance</span></div>
     <div class="kpis" id="kpis"></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-h"><span class="bar"></span><span>Routine maintenance by home</span></div>
+    <div class="note2" id="rtNote"></div>
+    <div class="rt-kpis" id="rtKpis"></div>
+    <div class="card span2" style="margin-top:16px">
+      <h3>Status matrix</h3><p class="cap">Each home against each routine cadence. Click a home or cell to see its checks below.</p>
+      <div class="matrix-wrap"><table class="matrix" id="rtMatrix"></table></div>
+      <div class="legend" id="rtLegend"></div>
+    </div>
+    <div class="card span2" style="margin-top:16px">
+      <div class="rt-detail-head">
+        <h3 id="rtDetailTitle">Routine checks</h3>
+        <div class="home-tabs" id="rtTabs"></div>
+      </div>
+      <div id="rtDetail"></div>
+    </div>
   </div>
 
   <div class="sec">
@@ -109,7 +173,7 @@
       </div>
       <div class="card span2">
         <h3>Certificates needing attention</h3><p class="cap" id="certCap"></p>
-        <table id="certAtt"><thead><tr><th>Home</th><th>Certificate</th><th>Status</th></tr></thead><tbody></tbody></table>
+        <table class="data-table" id="certAtt"><thead><tr><th>Home</th><th>Certificate</th><th>Status</th></tr></thead><tbody></tbody></table>
       </div>
     </div>
   </div>
@@ -119,11 +183,11 @@
     <div class="grid">
       <div class="card span2">
         <h3>Approved contractor directory</h3><p class="cap" id="contrCap">Vetted contractors on file</p>
-        <table id="contractors"><thead><tr><th>Contractor</th><th>Trade</th></tr></thead><tbody></tbody></table>
+        <table class="data-table" id="contractors"><thead><tr><th>Contractor</th><th>Trade</th></tr></thead><tbody></tbody></table>
       </div>
       <div class="card span2">
         <h3>Reference lists</h3><p class="cap">Supporting lists the pipeline reads from</p>
-        <table id="refs"><thead><tr><th>List</th><th>What it holds</th><th class="n2">Items</th></tr></thead><tbody></tbody></table>
+        <table class="data-table" id="refs"><thead><tr><th>List</th><th>What it holds</th><th class="n2">Items</th></tr></thead><tbody></tbody></table>
       </div>
     </div>
   </div>
@@ -132,8 +196,8 @@
 </div>
 
 <script>
-const MAINT_URL="https://ruthbloch.app.n8n.cloud/webhook/maint-data";
-const CERT_URL="https://ruthbloch.app.n8n.cloud/webhook/cert-data";
+const MAINT_URL=(window.__MAINT_URL)||"https://ruthbloch.app.n8n.cloud/webhook/maint-data";
+const CERT_URL=(window.__CERT_URL)||"https://ruthbloch.app.n8n.cloud/webhook/cert-data";
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 Chart.register(ChartDataLabels);
 Chart.defaults.color=css("--muted"); Chart.defaults.font.family="Figtree, sans-serif"; Chart.defaults.font.size=13;
@@ -148,6 +212,102 @@ const statusColour=k=>{k=(k||"").toLowerCase();
   if(k.indexOf("escal")>=0||k.indexOf("overdue")>=0)return "--crit";
   if(k.indexOf("complete")>=0||k.indexOf("done")>=0||k.indexOf("confirm")>=0)return "--ok";
   return "--low";};
+
+/* ---- routine helpers ---- */
+const CORE_HOMES=["Aurora","Orion","Cygnus","Leo","Lyra","Lynx","Vela House"];
+function fgroup(f){if(!f)return "Other";f=f.toLowerCase();
+  if(f.indexOf("month")>=0)return "Monthly";
+  if(f.indexOf("quarter")>=0)return "Quarterly";
+  if(f.indexOf("biannual")>=0)return "Biannual";
+  if(f.indexOf("annual")>=0||f.indexOf("year")>=0)return "Annual";
+  if(f.indexOf("season")>=0)return "Seasonal";
+  if(f.indexOf("week")>=0)return "Weekly";
+  if(f.indexOf("visit")>=0)return "On Visit";
+  return "Other";}
+function cellInfo(checks){
+  if(!checks.length)return null;
+  const n=checks.length, c=k=>checks.filter(x=>x.state===k).length;
+  const ov=c("overdue"), ds=c("due-soon")+c("missing-report"), done=c("complete"), uns=c("unscheduled");
+  let key,label;
+  if(ov){key="crit";label=ov+" overdue";}
+  else if(ds){key="warn";label=ds+" due soon";}
+  else if(done===n){key="ok";label="All done";}
+  else if(uns===n){key="low";label="Not scheduled";}
+  else {key="high";label=done?(done+"/"+n+" done"):"Scheduled";}
+  return {n:n,key:key,label:label};
+}
+function pillText(x){const d=x.daysLeft;
+  if(x.state==="complete")return "Complete";
+  if(x.state==="overdue")return "Overdue "+Math.abs(d)+"d";
+  if(x.state==="due-soon")return d<=0?"Due today":"Due in "+d+"d";
+  if(x.state==="upcoming")return "Due in "+d+"d";
+  if(x.state==="missing-report")return "Report missing";
+  return "Not scheduled";}
+let RIDX={}, RGROUPS=[];
+function selectHome(h){
+  document.querySelectorAll("#rtTabs button").forEach(b=>b.classList.toggle("on",b.getAttribute("data-h")===h));
+  document.getElementById("rtDetailTitle").textContent=h+" — routine checks";
+  const home=RIDX[h], box=document.getElementById("rtDetail");
+  if(!home){box.innerHTML="<p class='cap'>No routine checks loaded for this home yet.</p>";return;}
+  let html="";
+  RGROUPS.forEach(g=>{const checks=home[g];if(!checks||!checks.length)return;
+    html+="<div class='freq-group'><h4>"+esc(g)+" <span style='color:var(--faint);font-weight:600'>("+checks.length+")</span></h4>";
+    checks.forEach(x=>{html+="<div class='rcheck'><div class='rn'>"+esc(x.name)+"</div>"+(x.type?"<span class='rty'>"+esc(x.type)+"</span>":"")+"<span class='pill "+x.state+"'>"+pillText(x)+"</span></div>";});
+    html+="</div>";});
+  box.innerHTML=html;
+}
+function renderRoutine(R){
+  R=R||[];
+  const present={}; R.forEach(x=>present[fgroup(x.freq)]=1);
+  const extras=["On Visit","Weekly","Biannual","Other"].filter(g=>present[g]);
+  RGROUPS=["Monthly","Quarterly","Seasonal","Annual"].concat(extras);
+  const extraHomes=[]; R.forEach(x=>{const h=x.home||"(unassigned)";if(CORE_HOMES.indexOf(h)<0&&extraHomes.indexOf(h)<0)extraHomes.push(h);});
+  const HOMES=CORE_HOMES.concat(extraHomes);
+  RIDX={}; R.forEach(x=>{const h=x.home||"(unassigned)",g=fgroup(x.freq);(RIDX[h]=RIDX[h]||{});(RIDX[h][g]=RIDX[h][g]||[]).push(x);});
+  let html="<thead><tr><th class='h'>Home</th>"+RGROUPS.map(g=>"<th>"+esc(g)+"</th>").join("")+"</tr></thead><tbody>";
+  HOMES.forEach(h=>{html+="<tr><td class='home'>"+esc(h)+"</td>";
+    RGROUPS.forEach(g=>{const checks=(RIDX[h]&&RIDX[h][g])||[];const ci=cellInfo(checks);
+      if(!ci)html+="<td class='cell empty' data-h='"+esc(h)+"'>&middot;</td>";
+      else html+="<td class='cell c-"+ci.key+"' data-h='"+esc(h)+"'><div class='cn t-"+ci.key+"'>"+ci.n+"</div><div class='cl'>"+esc(ci.label)+"</div></td>";});
+    html+="</tr>";});
+  html+="</tbody>";
+  document.getElementById("rtMatrix").innerHTML=html;
+  document.querySelectorAll("#rtMatrix td.cell:not(.empty)").forEach(td=>td.addEventListener("click",()=>selectHome(td.getAttribute("data-h"))));
+  document.getElementById("rtTabs").innerHTML=HOMES.map(h=>"<button data-h='"+esc(h)+"' "+(RIDX[h]?"":"disabled")+">"+esc(h)+(RIDX[h]?"":" · none")+"</button>").join("");
+  document.querySelectorAll("#rtTabs button").forEach(b=>b.addEventListener("click",()=>{if(!b.disabled)selectHome(b.getAttribute("data-h"));}));
+  const by=k=>R.filter(x=>x.state===k).length;
+  const homesWith=HOMES.filter(h=>RIDX[h]).length;
+  const kp=[{n:homesWith+" / "+CORE_HOMES.length,l:"Homes with checks"},{n:R.length,l:"Routine checks"},{n:by("complete"),l:"Complete",c:"ok"},{n:by("overdue"),l:"Overdue",c:"crit"},{n:by("due-soon")+by("missing-report"),l:"Due soon",c:"warn"},{n:by("unscheduled"),l:"Not scheduled",c:"low"}];
+  document.getElementById("rtKpis").innerHTML=kp.map(k=>"<div class='k "+(k.c||"")+"'><div class='n'>"+k.n+"</div><div class='l'>"+k.l+"</div></div>").join("");
+  const miss=CORE_HOMES.filter(h=>!RIDX[h]);
+  document.getElementById("rtNote").innerHTML="<b>How to read this.</b> Routine checks are loaded for "+homesWith+" of "+CORE_HOMES.length+" homes"+(miss.length?" (not yet set up: "+esc(miss.join(", "))+")":"")+". "+by("overdue")+" overdue, "+by("complete")+" complete, and "+by("unscheduled")+" with no due date yet, so those cannot be tracked for timing until a due date or a recurring schedule is added in ClickUp.";
+  document.getElementById("rtLegend").innerHTML=[["crit","Overdue"],["warn","Due soon"],["high","Scheduled / on track"],["ok","All done"],["low","Not scheduled"]].map(x=>"<span><i class='l-"+x[0]+"'></i>"+x[1]+"</span>").join("");
+  const first=HOMES.filter(h=>RIDX[h])[0]||HOMES[0];
+  selectHome(first);
+}
+
+/* ---- charts ---- */
+function mkBarH(id,rows,color){
+  new Chart(document.getElementById(id),{type:"bar",
+    data:{labels:rows.map(r=>r.k),datasets:[{data:rows.map(r=>r.v),backgroundColor:color||rows.map(r=>css(r.c||"--accent")),borderRadius:7,barThickness:color?20:26}]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,layout:{padding:{right:26}},
+      scales:{x:{grid:{color:GRID},beginAtZero:true,ticks:{precision:0}},y:{grid:{display:false},ticks:{font:{size:13,weight:600},color:css("--fg")}}},
+      plugins:{datalabels:dl({anchor:"end",align:"end",formatter:v=>v})}}});
+}
+function mkBarV(id,rows,color){
+  new Chart(document.getElementById(id),{type:"bar",
+    data:{labels:rows.map(r=>r.k),datasets:[{data:rows.map(r=>r.v),backgroundColor:color,borderRadius:7,maxBarThickness:48}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:18}},
+      scales:{x:{grid:{display:false},ticks:{color:css("--fg"),font:{weight:600}}},y:{grid:{color:GRID},beginAtZero:true,ticks:{precision:0}}},
+      plugins:{datalabels:dl({anchor:"end",align:"top",formatter:v=>v})}}});
+}
+function doughnut(id,rows){
+  new Chart(document.getElementById(id),{type:"doughnut",
+    data:{labels:rows.map(r=>r.k),datasets:[{data:rows.map(r=>r.v),backgroundColor:rows.map(r=>css(r.c||"--accent")),borderColor:css("--panel"),borderWidth:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"58%",
+      plugins:{legend:{display:true,position:"right",labels:{boxWidth:14,boxHeight:14,padding:14,color:css("--fg"),font:{size:13.5}}},
+        datalabels:dl({color:"#0b1016",formatter:v=>v,font:{weight:800,size:15}})}}});
+}
 
 function buildModel(m,c){
   const k=m.counts||{};
@@ -172,34 +332,14 @@ function buildModel(m,c){
     certActions:{open:faults.length,high:faults.filter(f=>f.severity==="high").length},
     contractors:(m.contractors||[]).map(x=>({n:x.name,t:x.trade||""})),
     comp:m.contractorCompliance||{total:0,insuranceOk:0,insuranceExpiring30:0,insuranceExpiredOrMissing:0},
+    routine:m.routine||[],
     refs:[{k:"Home Managers",d:"Manager + deputy contacts per home",v:k.homeManagers||0},{k:"On-Call Rota",d:"Weekly on-call cover",v:k.onCall||0},{k:"Ratings log",d:"Contractor ratings submitted",v:k.ratings||0},{k:"Maintenance Settings",d:"Who gets chase / compliance emails",v:k.settings||0},{k:"Test Bin",d:"Self-test entries (safe to clear)",v:k.testBin||0}]
   };
 }
 
-function mkBarH(id,rows,color){
-  new Chart(document.getElementById(id),{type:"bar",
-    data:{labels:rows.map(r=>r.k),datasets:[{data:rows.map(r=>r.v),backgroundColor:color||rows.map(r=>css(r.c||"--accent")),borderRadius:7,barThickness:color?20:26}]},
-    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,layout:{padding:{right:26}},
-      scales:{x:{grid:{color:GRID},beginAtZero:true,ticks:{precision:0}},y:{grid:{display:false},ticks:{font:{size:13,weight:600},color:css("--fg")}}},
-      plugins:{datalabels:dl({anchor:"end",align:"end",formatter:v=>v})}}});
-}
-function mkBarV(id,rows,color){
-  new Chart(document.getElementById(id),{type:"bar",
-    data:{labels:rows.map(r=>r.k),datasets:[{data:rows.map(r=>r.v),backgroundColor:color,borderRadius:7,maxBarThickness:48}]},
-    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:18}},
-      scales:{x:{grid:{display:false},ticks:{color:css("--fg"),font:{weight:600}}},y:{grid:{color:GRID},beginAtZero:true,ticks:{precision:0}}},
-      plugins:{datalabels:dl({anchor:"end",align:"top",formatter:v=>v})}}});
-}
-function doughnut(id,rows){
-  new Chart(document.getElementById(id),{type:"doughnut",
-    data:{labels:rows.map(r=>r.k),datasets:[{data:rows.map(r=>r.v),backgroundColor:rows.map(r=>css(r.c||"--accent")),borderColor:css("--panel"),borderWidth:4}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:"58%",
-      plugins:{legend:{display:true,position:"right",labels:{boxWidth:14,boxHeight:14,padding:14,color:css("--fg"),font:{size:13.5}}},
-        datalabels:dl({color:"#0b1016",formatter:v=>v,font:{weight:800,size:15}})}}});
-}
-
 function render(DATA){
   document.getElementById("kpis").innerHTML=DATA.kpis.map(i=>'<div class="kpi '+(i.cls||"")+'"><div class="n">'+i.n+'</div><div class="l">'+i.l+'</div></div>').join("");
+  renderRoutine(DATA.routine);
   mkBarH("cList",DATA.byList.slice().sort((a,b)=>b.v-a.v),css("--accent"));
   doughnut("cNR",DATA.nr);
   doughnut("cCert",DATA.certStatus);
@@ -221,8 +361,12 @@ function fail(msg){
   document.getElementById("stamp").textContent="offline";
   document.getElementById("note").innerHTML='<b style="color:var(--crit)">Could not load live data.</b> '+esc(msg)+'. This page reads the maint-data and cert-data webhooks; check they are active in n8n.';
 }
-Promise.all([
-  fetch(MAINT_URL).then(r=>{if(!r.ok)throw new Error("maint-data "+r.status);return r.json();}),
-  fetch(CERT_URL).then(r=>{if(!r.ok)throw new Error("cert-data "+r.status);return r.json();})
-]).then(res=>render(buildModel(res[0],res[1]))).catch(e=>fail(e&&e.message?e.message:"network error"));
+if(window.__MAINT_DATA&&window.__CERT_DATA){
+  try{render(buildModel(window.__MAINT_DATA,window.__CERT_DATA));}catch(e){fail(e&&e.message?e.message:"render error");}
+}else{
+  Promise.all([
+    fetch(MAINT_URL).then(r=>{if(!r.ok)throw new Error("maint-data "+r.status);return r.json();}),
+    fetch(CERT_URL).then(r=>{if(!r.ok)throw new Error("cert-data "+r.status);return r.json();})
+  ]).then(res=>render(buildModel(res[0],res[1]))).catch(e=>fail(e&&e.message?e.message:"network error"));
+}
 </script>
