@@ -1,0 +1,336 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Maintenance Pipeline SOP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  /* Layout: single readable column; a pipeline strip, role cards, four step blocks, collapsible reference. */
+  :root{
+    --bg:#f5f7f8; --surface:#ffffff; --surface-2:#eef3f3;
+    --fg:#17222e; --muted:#5a6775; --faint:#8a95a2;
+    --border:#e3e8ec; --border-strong:#cdd6dc;
+    --accent:#0e7c86; --accent-ink:#0a5a62; --accent-weak:#e2f1f1;
+    --red:#b42318; --red-weak:#fdf1ef; --red-border:#f1c4bd;
+    --amber:#9a6a00; --amber-weak:#fbf4e0;
+    --shadow:0 1px 2px rgba(20,35,45,.05),0 3px 12px rgba(20,35,45,.05);
+    --f:"Figtree",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0f141a; --surface:#161d26; --surface-2:#1b2530;
+    --fg:#e7ecf1; --muted:#9aa6b3; --faint:#6b7684;
+    --border:#263039; --border-strong:#36434f;
+    --accent:#45c8bd; --accent-ink:#bdeeea; --accent-weak:#12302f;
+    --red:#ff9c90; --red-weak:#351916; --red-border:#5a2a24;
+    --amber:#e3b145; --amber-weak:#33290f;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 3px 14px rgba(0,0,0,.25);
+    color-scheme:dark;
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0f141a; --surface:#161d26; --surface-2:#1b2530;
+    --fg:#e7ecf1; --muted:#9aa6b3; --faint:#6b7684;
+    --border:#263039; --border-strong:#36434f;
+    --accent:#45c8bd; --accent-ink:#bdeeea; --accent-weak:#12302f;
+    --red:#ff9c90; --red-weak:#351916; --red-border:#5a2a24;
+    --amber:#e3b145; --amber-weak:#33290f;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 3px 14px rgba(0,0,0,.25);
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f);line-height:1.55;font-size:16px}
+  .wrap{max-width:820px;margin:0 auto;padding-block:28px 56px;padding-left:16px;padding-right:16px}
+  code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);padding:1px 6px;border-radius:5px;word-break:break-word}
+  a{color:var(--accent-ink)} a:hover{text-decoration:underline}
+  h1{font-size:2rem;font-weight:800;letter-spacing:-.02em;margin:0 0 6px;text-wrap:balance}
+  .sub{color:var(--muted);font-size:1.05rem;margin:0 0 14px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px}
+  .chip{font-size:.78rem;font-weight:600;color:var(--accent-ink);background:var(--accent-weak);border:1px solid var(--border);padding:4px 10px;border-radius:999px}
+  h2{font-size:1.3rem;font-weight:700;letter-spacing:-.01em;margin:0 0 4px;text-wrap:balance}
+  .section{margin-top:30px}
+  .lead{color:var(--muted)}
+
+  /* callouts */
+  .callout{border:1px solid var(--border);border-left:4px solid var(--accent);background:var(--surface);border-radius:10px;padding:13px 15px;margin:14px 0;box-shadow:var(--shadow)}
+  .callout h3{margin:0 0 6px;font-size:.82rem;text-transform:uppercase;letter-spacing:.05em;color:var(--accent-ink)}
+  .callout ul{margin:6px 0 0;padding-left:18px} .callout li{margin:3px 0}
+  .callout.auto{border-left-color:var(--accent);background:var(--accent-weak)}
+  .callout.auto h3{color:var(--accent-ink)}
+  .emergency{border:1px solid var(--red-border);border-left:4px solid var(--red);background:var(--red-weak);border-radius:10px;padding:14px 16px;margin:16px 0}
+  .emergency h3{margin:0 0 4px;color:var(--red);font-size:.95rem;font-weight:800;text-transform:none;letter-spacing:0}
+  .emergency p{margin:0;color:var(--fg)}
+  .tip{border-left-color:var(--amber);background:var(--amber-weak)}
+  .tip h3{color:var(--amber)}
+
+  /* pipeline */
+  .pipe{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+  .stage{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px;box-shadow:var(--shadow);position:relative}
+  .stage .num{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;margin-bottom:8px}
+  :root[data-theme="dark"] .stage .num,
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .stage .num{color:#07211f}}
+  .stage b{display:block;font-size:.98rem}
+  .stage span{color:var(--muted);font-size:.84rem}
+
+  /* role cards */
+  .roles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+  .role{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .role b{display:block;margin-bottom:2px}
+  .role span{color:var(--muted);font-size:.9rem}
+
+  /* step blocks */
+  .part{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 18px 6px;margin-top:16px;box-shadow:var(--shadow)}
+  .who{display:inline-block;font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent-ink);background:var(--accent-weak);padding:3px 10px;border-radius:999px;margin-bottom:8px}
+  ol.steps{list-style:none;margin:10px 0 6px;padding:0;counter-reset:s}
+  ol.steps>li{counter-increment:s;position:relative;padding-left:40px;margin:0 0 14px;min-height:28px}
+  ol.steps>li::before{content:counter(s);position:absolute;left:0;top:-1px;width:28px;height:28px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border-strong);color:var(--fg);font-weight:700;font-size:.9rem;display:flex;align-items:center;justify-content:center}
+  ol.steps b{font-weight:700}
+
+  .qbox{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin:12px 0}
+  .qbox ol{margin:6px 0 0;padding-left:20px} .qbox li{margin:4px 0}
+
+  details{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin:10px 0;box-shadow:var(--shadow);overflow:hidden}
+  summary{cursor:pointer;padding:14px 16px;font-weight:700;font-size:1.02rem;list-style:none;display:flex;align-items:center;gap:10px}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"+";color:var(--accent);font-weight:800;font-size:1.2rem;width:16px}
+  details[open] summary::before{content:"\2013"}
+  .det-body{padding:0 16px 14px}
+  .det-body h4{margin:14px 0 4px;font-size:1rem}
+  .det-body p,.det-body li{color:var(--fg)}
+  .faq{margin:0} .faq dt{font-weight:600;margin-top:10px} .faq dd{margin:2px 0 0;color:var(--muted)}
+
+  .where{list-style:none;padding:0;margin:8px 0 0}
+  .where li{padding:8px 0;border-bottom:1px solid var(--border)} .where li:last-child{border:none}
+  .where b{display:block}
+
+  .dod{background:var(--accent-weak);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-top:16px}
+  .dod ul{list-style:none;padding:0;margin:10px 0 0}
+  .dod li{padding-left:28px;position:relative;margin:7px 0}
+  .dod li::before{content:"\2713";position:absolute;left:0;color:var(--accent);font-weight:800}
+
+  .foot{margin-top:34px;padding-top:14px;border-top:1px solid var(--border);color:var(--faint);font-size:.85rem}
+
+  @media (max-width:640px){
+    h1{font-size:1.6rem}
+    .pipe{grid-template-columns:1fr 1fr}
+    .roles{grid-template-columns:1fr}
+  }
+  @media (max-width:420px){ .pipe{grid-template-columns:1fr} }
+</style>
+
+<div class="wrap">
+
+  <div class="chips"><span class="chip">Updated 2 Sep 2026</span><span class="chip">For everyone at HAHL</span></div>
+  <h1>Maintenance Pipeline</h1>
+  <p class="sub">How we report, assign, close and rate maintenance jobs at Hearth &amp; Home Living. Written so anyone can follow it, including someone brand new.</p>
+
+  <div class="emergency">
+    <h3>Emergency? Do not use the form first.</h3>
+    <p>Fire, gas smell, flooding, a break-in, or a child in immediate danger: call <b>999</b> or the on-call manager straight away and make the home safe. Log it on the form afterwards so there is a record.</p>
+  </div>
+
+  <div class="section">
+    <h2>The job, start to finish</h2>
+    <div class="pipe">
+      <div class="stage"><div class="num">1</div><b>Report</b><span>Any staff, on the phone form</span></div>
+      <div class="stage"><div class="num">2</div><b>Triage &amp; assign</b><span>Maintenance Team (Mark)</span></div>
+      <div class="stage"><div class="num">3</div><b>Visit</b><span>Contractor, with the Manager</span></div>
+      <div class="stage"><div class="num">4</div><b>Close &amp; rate</b><span>House Manager</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Who does what</h2>
+    <div class="roles">
+      <div class="role"><b>Any staff member</b><span>Support Worker, Senior, Deputy, Manager or RI. Reports the job on the form.</span></div>
+      <div class="role"><b>Maintenance Team</b><span>Currently Mark. Triages and picks the contractor.</span></div>
+      <div class="role"><b>Contractor</b><span>Turns up and does the work, coordinating with the Manager.</span></div>
+      <div class="role"><b>House Manager</b><span>Confirms complete, adds a note, or escalates. Rates the contractor.</span></div>
+      <div class="role"><b>Deputy Manager</b><span>Copied in as backup, steps in if the Manager is away.</span></div>
+    </div>
+    <p class="lead" style="margin-top:10px">Ratings and compliance run themselves in the background.</p>
+  </div>
+
+  <div class="part">
+    <span class="who">You are the reporter</span>
+    <h2>1. Report the job</h2>
+    <ol class="steps">
+      <li>Open the form on your phone: <code>hearthomeliving.github.io/hhl-maintenance-form</code>. Save it to your home screen so next time it is one tap.</li>
+      <li>Answer one question at a time: your home, who you are, your name, and the category that fits. No category fits? Pick <b>Other</b>.</li>
+      <li>Do the pre-checks it asks for (reset the boiler, check the fuse, check the pressure). Tick them off honestly. This saves needless call-outs and money.</li>
+      <li>Add photos. At least one wide shot of where the problem is, plus close-ups.</li>
+      <li>Submit. You get a reference starting <code>MAINT-</code>. Screenshot it, that is your case number.</li>
+    </ol>
+    <div class="callout auto">
+      <h3>What happens automatically</h3>
+      <ul>
+        <li>A task appears on the Non Routine Maintenance list within seconds.</li>
+        <li>Ofsted-relevant jobs (heating, hot water, fire safety, doors, damp, fences) are flagged to prioritise.</li>
+        <li>Vehicle problems go to the Vehicles list instead.</li>
+        <li>Nobody at the home needs to do anything else. The ball is with the Maintenance Team.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="part">
+    <span class="who">You are the Maintenance Team</span>
+    <h2>2. Triage and assign</h2>
+    <ol class="steps">
+      <li>Open the <b>Non Routine Maintenance</b> list. New jobs land at the top as "Open".</li>
+      <li>Read it, check the photos and the pre-checks, then set <b>Severity</b>: Critical, High, Medium or Low.</li>
+      <li>Pick from the <b>Approved Contractor</b> dropdown (not the old "Contractors" field, which is being retired). Only vetted contractors appear.</li>
+      <li>Tick <b>Send Follow-Up</b>. Never tick this before you have added the contractor, that is what fires the emails.</li>
+    </ol>
+    <div class="callout auto">
+      <h3>What happens when you tick Send Follow-Up</h3>
+      <ul>
+        <li>Insurance is checked first. If expired or missing, the contractor is not emailed and the Manager gets a red-banner "pick another and try again".</li>
+        <li>If valid, the contractor is emailed the job, the Manager's contact, the Deputy as backup and all photos. The Manager gets a follow-up form link.</li>
+        <li>The task's Follow-Up Status moves to "Sent".</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="part">
+    <span class="who">The contractor</span>
+    <h2>3. The visit</h2>
+    <ol class="steps">
+      <li>They get an email: "Maintenance job assigned: MAINT-... at [home]", with the Manager's and Deputy's contacts.</li>
+      <li>They open the photos to understand the problem before travelling.</li>
+      <li>They ring or message the House Manager to agree a time.</li>
+      <li>They turn up and do the work.</li>
+    </ol>
+    <p class="lead">Contractor and House Manager coordinate directly. The Maintenance Team only steps in if asked.</p>
+  </div>
+
+  <div class="part">
+    <span class="who">You are the House Manager (or Deputy)</span>
+    <h2>4. Close the loop and rate</h2>
+    <ol class="steps">
+      <li>Open the follow-up email and tap the teal <b>Open follow-up form</b> button.</li>
+      <li>Choose one: <b>Mark Complete</b> (done), <b>Add Notes</b> (partly done or an update, stays open), or <b>Escalate</b> (something went wrong, type what and the team is emailed at once).</li>
+      <li>If you marked complete, answer four quick questions (below), then tap <b>Confirm complete</b>. The task closes and the team gets the summary.</li>
+    </ol>
+    <div class="qbox">
+      <b>The four rating questions</b>
+      <ol>
+        <li>Did the contractor arrive on time? (Yes / No)</li>
+        <li>Fixed on the first visit? (Yes / Partial / No)</li>
+        <li>Standard of work? (Excellent / Good / Fair / Poor)</li>
+        <li>Would you use them again? (Yes / With reservations / No)</li>
+      </ol>
+      <span class="lead" style="font-size:.9rem">Answer honestly. This is how we know who our good contractors are.</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Running in the background</h2>
+    <p class="lead">You do not need to do anything for these.</p>
+    <div class="callout">
+      <ul style="margin:0;padding-left:18px">
+        <li><b>Nightly contractor scorecard (03:00).</b> Every rating rolls into the contractor's record (on-time %, first-visit fix %, standard, would-use-again, sample size over six months), visible on the Approved Contractors list.</li>
+        <li><b>Daily compliance email (08:30).</b> The team is emailed any contractor whose insurance has expired, is missing, or is due within 30 days. If all are compliant, no email.</li>
+        <li><b>Planned:</b> a Sunday Home-Manager digest, category SLA chasers, and a contractor visit-date proposal flow.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Reference and troubleshooting</h2>
+
+    <details>
+      <summary>When the job does not fit any category ("Other")</summary>
+      <div class="det-body">
+        <p>The form makes the reporter do more, on purpose: six safety-screening questions (child in the area, immediate danger, structural, gas smell, flooding, shock risk), at least two photos, and a description of 15 words or more. They cannot submit without all three.</p>
+        <h4>Maintenance Team</h4>
+        <ol class="steps">
+          <li>Read the safety answers first. Any "yes", treat as Critical or High until proven otherwise.</li>
+          <li>Set Severity manually. Ofsted-relevant is not auto-ticked for "Other", so decide yourself.</li>
+          <li>If the same kind of "Other" comes up more than twice in a couple of months, tell Adrian and it becomes a proper category.</li>
+          <li>Assign: if an Approved Contractor covers it, assign as normal. If not, either add a new contractor via Ruth (preferred), or do a one-off manual dispatch (email them yourself, do NOT tick Send Follow-Up, and add a comment "manual dispatch, contractor: [name/phone/email]" for the record).</li>
+        </ol>
+        <p>If "Other" was picked but it clearly fits a category, just rename the task and set the correct category field on it.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Compliance and insurance</summary>
+      <div class="det-body">
+        <p>Every Approved Contractor needs a current public-liability certificate on file and an expiry date, or the system will not send them jobs.</p>
+        <ol class="steps">
+          <li>Open the contractor's task on the Approved Contractors list.</li>
+          <li>Upload the PDF into "Insurance certificate".</li>
+          <li>Fill in "Insurance expiry" from the certificate, and save.</li>
+        </ol>
+        <p>DBS status sits on the same task (Not required / Enhanced / Standard / On file / Expired). Update it when paperwork changes. Genuinely exempt trades: leave expiry blank; the daily chase flags it for Ruth to mark.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Duplicates and recurring problems</summary>
+      <div class="det-body">
+        <p><b>Same problem reported twice while the first is open:</b> keep the older task, close the newer one, and comment "also reported by [name] on [date]".</p>
+        <p><b>A problem comes back within 30 days of closing:</b> rename the task with a <code>[RECURRING]</code> prefix and tell the team. Recurring issues point at a root cause, not just a symptom.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Troubleshooting</summary>
+      <div class="det-body">
+        <dl class="faq">
+          <dt>No follow-up email</dt><dd>Check Spam for <code>maintenance@hearthomeliving.co.uk</code> and mark Not Spam. Still nothing? Ask the team to re-tick Send Follow-Up.</dd>
+          <dt>Tapped the wrong button</dt><dd>Ring the team to reopen the task. Do not resubmit the form for the same job.</dd>
+          <dt>Contractor never shows</dt><dd>Wait 24 hours, try once more, then tap Escalate. A reminder also fires automatically after five working days.</dd>
+          <dt>Ticked Send Follow-Up, nothing happened</dt><dd>Fill in the Approved Contractor field first. Still nothing? Tell Adrian and check the n8n Automation Error list.</dd>
+          <dt>Link says the task is already closed</dt><dd>Someone else completed or escalated it. Check the task to see who did what.</dd>
+          <dt>Wrong contractor or wrong home</dt><dd>Change the field on the task; re-tick Send Follow-Up for a new contractor (ring the old one, they are not auto-cancelled).</dd>
+        </dl>
+      </div>
+    </details>
+
+    <details>
+      <summary>Where things live</summary>
+      <div class="det-body">
+        <ul class="where">
+          <li><b>Reporting form</b><a href="https://hearthomeliving.github.io/hhl-maintenance-form">hearthomeliving.github.io/hhl-maintenance-form</a></li>
+          <li><b>Follow-up form</b>Opens only via the token in your email. Do not bookmark it.</li>
+          <li><b>Non Routine Maintenance list</b>Where open jobs sit.</li>
+          <li><b>Approved Contractors list</b>Who we use, their scorecards and compliance.</li>
+          <li><b>Home Managers list</b>Who to email at each home.</li>
+          <li><b>Ratings log</b>Every rating submitted (read-only in practice).</li>
+          <li><b>Maintenance Settings</b>Who gets routine chase and compliance emails.</li>
+          <li><b>Emergencies list</b>Where any true emergency task lives.</li>
+          <li><b>n8n Automation Error list</b>Where workflow errors surface. Adrian watches this.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details>
+      <summary>Who to ask</summary>
+      <div class="det-body">
+        <ul class="where">
+          <li><b>Maintenance Team</b>Currently Mark.</li>
+          <li><b>RI (emergencies)</b>Laurence.</li>
+          <li><b>Form or workflow acting up</b>Adrian.</li>
+          <li><b>Adding a contractor or a home</b>Ruth.</li>
+          <li><b>Manager or Deputy details out of date</b>Whoever manages that home.</li>
+        </ul>
+      </div>
+    </details>
+  </div>
+
+  <div class="section">
+    <h2>A job is "done" when</h2>
+    <div class="dod">
+      <ul>
+        <li>The House Manager has tapped Mark Complete on the follow-up form.</li>
+        <li>Four ratings are recorded on the Ratings log.</li>
+        <li>The task shows status "complete".</li>
+        <li>The completion email has reached the Maintenance Team.</li>
+      </ul>
+      <p class="lead" style="margin:10px 0 0;font-size:.9rem">If any one is missing, the job is not done.</p>
+    </div>
+  </div>
+
+  <p class="foot">Hearth &amp; Home Living maintenance pipeline. Plain-English guide for everyone. Last updated 2 September 2026.</p>
+</div>
