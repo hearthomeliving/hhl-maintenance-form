@@ -116,6 +116,16 @@
     .roles{grid-template-columns:1fr}
   }
   @media (max-width:420px){ .pipe{grid-template-columns:1fr} }
+
+  /* Prominent call-to-action: open the maintenance form */
+  .cta-form{display:flex;align-items:center;justify-content:center;gap:14px;width:100%;margin:18px 0 2px;padding:18px 22px;background:var(--accent);color:#fff;border:1px solid var(--accent-ink);border-radius:14px;font-size:1.18rem;font-weight:800;letter-spacing:-.01em;text-decoration:none;box-shadow:0 2px 6px rgba(14,124,134,.25),0 10px 26px rgba(14,124,134,.16);transition:transform .08s ease,box-shadow .12s ease}
+  .cta-form:hover{text-decoration:none;transform:translateY(-2px);box-shadow:0 4px 10px rgba(14,124,134,.32),0 14px 32px rgba(14,124,134,.22)}
+  .cta-form .ic{font-size:1.35rem;line-height:1}
+  .cta-form .lbl{display:flex;flex-direction:column;line-height:1.15;text-align:left}
+  .cta-form .lbl small{font-size:.78rem;font-weight:600;opacity:.92;margin-top:3px}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .cta-form{color:#052225}}
+  :root[data-theme="dark"] .cta-form{color:#052225}
+  @media (max-width:420px){ .cta-form{font-size:1.05rem;padding:16px 18px} }
 </style>
 
 <div class="wrap">
@@ -128,6 +138,12 @@
     <h3>Emergency? Do not use the form first.</h3>
     <p>Fire, gas smell, flooding, a break-in, or a child in immediate danger: call <b>999</b> or the on-call manager straight away and make the home safe. Log it on the form afterwards so there is a record.</p>
   </div>
+
+  <a class="cta-form" href="https://hearthomeliving.github.io/hhl-maintenance-form/" target="_blank" rel="noopener">
+    <span class="ic" aria-hidden="true">&#128295;</span>
+    <span class="lbl">Report a maintenance issue<small>Opens the maintenance form in a new tab</small></span>
+    <span class="ic" aria-hidden="true">&rarr;</span>
+  </a>
 
   <div class="section">
     <h2>The job, start to finish</h2>
@@ -155,7 +171,7 @@
     <span class="who">You are the reporter</span>
     <h2>1. Report the job</h2>
     <ol class="steps">
-      <li>Open the form on your phone: <code>hearthomeliving.github.io/hhl-maintenance-form</code>. Save it to your home screen so next time it is one tap.</li>
+      <li>Open the form on your phone: <a href="https://hearthomeliving.github.io/hhl-maintenance-form/" target="_blank" rel="noopener"><code>hearthomeliving.github.io/hhl-maintenance-form</code></a>. Save it to your home screen so next time it is one tap.</li>
       <li>Answer one question at a time: your home, who you are, your name, and the category that fits. No category fits? Pick <b>Other</b>.</li>
       <li>Do the pre-checks it asks for (reset the boiler, check the fuse, check the pressure). Tick them off honestly. This saves needless call-outs and money.</li>
       <li>Add photos. At least one wide shot of where the problem is, plus close-ups.</li>
