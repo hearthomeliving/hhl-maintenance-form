@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fleet Mileage &amp; Excess Costs</title>
+<style>
+  :root { --ink: #1f2733; --muted: #6b7280; --card: #ffffff; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, Arial, sans-serif; margin: 0; background: #eef2f6; color: var(--ink); }
+  .top { background: linear-gradient(100deg, #16324f, #1f4e79); color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .top h1 { font-size: 17px; margin: 0; font-weight: 700; }
+  .badge { background: #f59e0b; color: #111; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 999px; letter-spacing: .5px; }
+  .top .sub { font-size: 12px; opacity: .85; }
+  .top button { margin-left: auto; background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.4); border-radius: 7px; padding: 5px 12px; font-size: 12.5px; cursor: pointer; }
+  .top button:disabled { opacity: .6; cursor: wait; }
+  .wrap { padding: 14px 18px 24px; max-width: 1200px; margin: 0 auto; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .kcard { background: var(--card); border: 1px solid #dde4ec; border-radius: 10px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(16,24,40,.07); }
+  .kcard .kt { font-size: 10.5px; font-weight: 800; color: var(--muted); letter-spacing: .6px; text-transform: uppercase; }
+  .kcard .kv { font-size: 16px; font-weight: 800; margin-top: 3px; }
+  .kcard .ks { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .tablewrap { background: var(--card); border: 1px solid #dde4ec; border-radius: 10px; overflow: auto; box-shadow: 0 1px 3px rgba(16,24,40,.07); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th { text-align: left; font-size: 10.5px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); padding: 9px 10px; border-bottom: 1.5px solid #cbd5e1; white-space: nowrap; background: #f8fafc; }
+  td { padding: 9px 10px; border-bottom: 1px solid #e5eaf0; vertical-align: middle; white-space: nowrap; }
+  tr:nth-child(even) td { background: #f1f4f8; }
+  .reg { font-weight: 800; font-size: 13px; background: #fcd34d; color: #111; border: 1.5px solid #1f2733; border-radius: 5px; padding: 1px 7px; letter-spacing: 1.2px; white-space: nowrap; }
+  .bar { position: relative; background: #e5eaf0; border-radius: 999px; height: 14px; width: 150px; overflow: hidden; }
+  .bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; }
+  .ok { color: #15803d; font-weight: 700; }
+  .warn { color: #b45309; font-weight: 700; }
+  .bad { color: #b91c1c; font-weight: 700; }
+  .muted { color: var(--muted); }
+  .cost { font-weight: 800; }
+  .note { font-size: 11.5px; color: var(--muted); margin-top: 12px; line-height: 1.6; max-width: 900px; }
+  #loadmsg { padding: 30px; text-align: center; color: var(--muted); font-size: 13px; }
+  .error { color: #b91c1c; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Fleet Mileage &amp; Excess Costs</h1>
+  <span class="badge">SANDBOX</span>
+  <span class="sub" id="stamp"></span>
+  <button id="refreshbtn">&#8635; Refresh</button>
+</div>
+<div class="wrap">
+  <div class="cards" id="cards" style="display:none">
+    <div class="kcard"><div class="kt">Furthest over allowance today</div><div class="kv" id="k1v">—</div><div class="ks" id="k1s"></div></div>
+    <div class="kcard"><div class="kt">Most expensive to keep</div><div class="kv" id="k2v">—</div><div class="ks" id="k2s"></div></div>
+    <div class="kcard"><div class="kt">Projected excess, whole fleet</div><div class="kv" id="k3v">—</div><div class="ks" id="k3s"></div></div>
+    <div class="kcard"><div class="kt">Within allowance</div><div class="kv" id="k4v">—</div><div class="ks" id="k4s"></div></div>
+  </div>
+  <div id="loadmsg">Loading fleet data…</div>
+  <div class="tablewrap" id="tablewrap" style="display:none">
+    <table>
+      <thead><tr>
+        <th>Reg</th><th>Vehicle</th><th>Home</th><th>Contract used</th><th></th>
+        <th>Vs allowance today</th><th>Projected at lease end</th><th>Excess miles</th><th>Rate</th><th>Projected cost</th><th>Lease ends</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="note">
+    Mileages are GPS estimates anchored on MOT odometer readings and slightly understate road miles.
+    Lease start is taken as 36 months before the Arval end date. "Vs allowance today" compares miles used with the
+    pro-rata share of the contract allowance. Projections assume driving continues at the average rate so far;
+    Arval's own figures at lease end will be slightly higher. Owned vehicles (no mileage contract) are not listed.
+  </div>
+</div>
+<script>
+const DATA_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-data';
+function fmtReg(r) {
+  const x = String(r || '').toUpperCase().replace(/\s+/g, '');
+  return x.length === 7 ? x.slice(0, 4) + ' ' + x.slice(4) : x;
+}
+const gbp = x => '£' + Math.round(x).toLocaleString('en-GB');
+const num = x => Math.round(x).toLocaleString('en-GB');
+function calc(c) {
+  if (!c || c.leaseProvider === 'Owned' || !c.leaseEnd || !c.contractMileage || !c.estOdometer || c.contractStartMileage === null || c.contractStartMileage === undefined) return null;
+  const end = new Date(c.leaseEnd);
+  const start = new Date(end);
+  start.setMonth(start.getMonth() - 36);
+  const now = new Date();
+  const frac = (now - start) / (end - start);
+  if (!(frac > 0) || frac >= 1.5) return null;
+  const used = c.estOdometer - c.contractStartMileage;
+  if (!(used > 0)) return null;
+  const cm = Number(c.contractMileage);
+  const allow = cm * frac;
+  const overNow = used - allow;
+  const proj = used / frac;
+  const exc = Math.max(0, proj - cm);
+  const rate = Number(c.excessPencePerMile) || 0;
+  return {
+    reg: fmtReg(c.reg),
+    car: ((c.make || '') + ' ' + (c.model || '')).trim() || '—',
+    home: c.home || '—',
+    used, cm, frac, overNow, proj, exc, rate,
+    cost: exc * rate / 100,
+    endDay: String(c.leaseEnd).slice(0, 10)
+  };
+}
+function barHtml(r) {
+  const pct = Math.min(100, Math.round(r.used / r.cm * 100));
+  const col = r.used >= r.cm ? '#dc2626' : (r.overNow > 0 ? '#d97706' : '#16a34a');
+  return '<div class="bar"><i style="width:' + pct + '%;background:' + col + '"></i></div>';
+}
+function draw(payload) {
+  const comps = (payload.vehicles || []).map(v => v.compliance).concat(payload.untracked || []).filter(Boolean);
+  const rows = comps.map(calc).filter(Boolean).sort((a, b) => b.cost - a.cost);
+  const tb = document.getElementById('tbody');
+  tb.innerHTML = rows.map(r => {
+    const vs = r.overNow > 0
+      ? '<span class="' + (r.used >= r.cm ? 'bad' : 'warn') + '">' + num(r.overNow) + ' mi over</span>'
+      : '<span class="ok">' + num(-r.overNow) + ' mi under</span>';
+    const usedTxt = num(r.used) + ' / ' + num(r.cm) + ' mi' + (r.used >= r.cm ? ' <span class="bad">(allowance used up)</span>' : '');
+    const costTxt = r.cost > 0 ? '<span class="cost bad">' + gbp(r.cost) + '</span>' : '<span class="ok">£0</span>';
+    return '<tr><td><span class="reg">' + r.reg + '</span></td><td>' + r.car + '</td><td>' + r.home + '</td>' +
+      '<td>' + usedTxt + '</td><td>' + barHtml(r) + '</td><td>' + vs + '</td>' +
+      '<td>' + num(r.proj) + ' mi</td><td>' + (r.exc > 0 ? num(r.exc) : '<span class="muted">—</span>') + '</td>' +
+      '<td>' + (r.rate ? r.rate + 'p' : '—') + '</td><td>' + costTxt + '</td><td>' + r.endDay + '</td></tr>';
+  }).join('');
+  if (rows.length) {
+    const worstOver = rows.slice().sort((a, b) => b.overNow - a.overNow)[0];
+    const worstCost = rows[0];
+    const totCost = rows.reduce((s, r) => s + r.cost, 0);
+    const underCount = rows.filter(r => r.overNow <= 0).length;
+    document.getElementById('k1v').textContent = worstOver.reg;
+    document.getElementById('k1s').textContent = num(worstOver.overNow) + ' miles over pro-rata (' + worstOver.car + ')';
+    document.getElementById('k2v').textContent = worstCost.cost > 0 ? worstCost.reg : 'none';
+    document.getElementById('k2s').textContent = worstCost.cost > 0 ? 'projected ' + gbp(worstCost.cost) + ' at ' + worstCost.rate + 'p/mi (' + worstCost.car + ')' : '';
+    document.getElementById('k3v').textContent = gbp(totCost);
+    document.getElementById('k3s').textContent = 'if driving continues at current rates';
+    document.getElementById('k4v').textContent = underCount + ' of ' + rows.length;
+    document.getElementById('k4s').textContent = 'cars at or under their pro-rata allowance';
+    document.getElementById('cards').style.display = 'grid';
+  }
+  document.getElementById('stamp').textContent = 'Live from the fleet registry · ' + new Date(payload.generatedAt).toLocaleString('en-GB');
+}
+async function load() {
+  const msg = document.getElementById('loadmsg');
+  try {
+    const res = await fetch(DATA_URL + '?t=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const payload = await res.json();
+    draw(payload);
+    msg.style.display = 'none';
+    document.getElementById('tablewrap').style.display = 'block';
+  } catch (e) {
+    msg.style.display = 'block';
+    msg.className = 'error';
+    msg.textContent = 'Could not load fleet data (' + e.message + '). Retrying in 60 seconds…';
+    setTimeout(load, 60000);
+  }
+}
+document.getElementById('refreshbtn').onclick = async function() {
+  const b = this;
+  b.disabled = true;
+  b.textContent = 'Reloading…';
+  await load();
+  b.disabled = false;
+  b.innerHTML = '&#8635; Refresh';
+};
+load();
+setInterval(load, 300000);
+</script>
+</body>
+</html>
