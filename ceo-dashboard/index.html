@@ -199,8 +199,6 @@ function render(){
   h+="<div><div class='sec-h'><span class='bar'></span><span>Certificates &amp; compliance</span></div><div class='card'>"+certBlock(homes)+"</div></div>";
   h+="<div><div class='sec-h'><span class='bar'></span><span>Fleet, MOT &amp; servicing</span></div><div class='card'>"+fleetBlock(homes)+"</div></div>";
   h+="</div>";
-  // faults full width
-  h+="<div class='sec'><div class='sec-h'><span class='bar'></span><span>Faults &amp; remedial actions</span></div><div class='card'>"+faultBlock(homes)+"</div></div>";
   document.getElementById("body").innerHTML=h;
 }
 
@@ -240,22 +238,6 @@ function fleetBlock(homes){
   return any?out:"<div class='empty'>No fleet data available.</div>";
 }
 
-function faultBlock(homes){
-  var any=false,out="";
-  homes.forEach(function(o){
-    if(!o.fOpen)return;
-    any=true;
-    var extra=o.fOpen-o.fItems.length;
-    out+="<div class='home-blk'><div class='home-h'><b>"+esc(o.home)+"</b><span class='meta'>"+o.fOpen+" open &middot; "+o.fHigh+" high, "+o.fNormal+" normal, "+o.fLow+" low</span></div>";
-    o.fItems.slice().sort(function(a,b){if(a.over!==b.over)return a.over?-1:1;var sr={high:0,normal:1,low:2};return (sr[a.sev]||1)-(sr[b.sev]||1)||((a.due||8.6e15)-(b.due||8.6e15));}).forEach(function(it){
-      var sevCls=it.sev==="high"?"c-crit":(it.sev==="low"?"c-mut":"c-warn");
-      out+="<div class='item'><div class='t'><a class='lk'"+clk(it.url)+">"+esc(it.title)+"</a> "+chip(it.sev||"normal",sevCls)+"</div><div class='r'>"+(it.due?"<span class='due'>due "+fmt(it.due)+"</span>":"")+(it.over?chip("Overdue","c-crit"):"")+"</div></div>";
-    });
-    if(extra>0)out+="<div class='item'><div class='t z'>+ "+extra+" more normal/low fault"+(extra===1?"":"s")+" open</div><div class='r'></div></div>";
-    out+="</div>";
-  });
-  return any?out:"<div class='allok'>&#10003; No open faults across the homes.</div>";
-}
 
 loadAll();
 setInterval(loadAll, 5*60*1000);
