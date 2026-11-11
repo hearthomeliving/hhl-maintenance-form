@@ -165,7 +165,8 @@ function toRow(v) {
     milesMonth: (c.estOdometer && (c.odoMonthStart || c.odoMonthStart === 0)) ? Math.round(c.estOdometer - c.odoMonthStart) : null,
     nextServiceDue: c.nextServiceDue || null,
     insuranceExpiry: c.insuranceExpiry || null,
-    insuranceWho: c.insuranceExpiry ? null : (c.leaseProvider === 'Owned' ? 'Owned' : (c.leaseProvider || null)),
+    insuranceWho: c.insuranceExpiry ? null : (c.insurer || (c.leaseProvider === 'Owned' ? 'Owned' : (c.leaseProvider || null))),
+    breakdownWho: c.breakdownProvider || null,
     breakdownExpiry: c.breakdownExpiry || null,
     leaseEnd: c.leaseEnd || null,
     contractMileage: c.contractMileage || null,
@@ -226,8 +227,8 @@ function openDetail(r) {
   h += drow('Last MOT result', r.motLastResult || '—');
   h += drow('Next service', dueCell(r.nextServiceDue));
   h += drow('Road tax due', dueCell(r.taxDueDate));
-  h += drow('Insurance', r.insuranceExpiry ? dueCell(r.insuranceExpiry) : (r.insuranceWho || '—'));
-  h += drow('Breakdown cover', dueCell(r.breakdownExpiry));
+  h += drow('Insurance', r.insuranceExpiry ? dueCell(r.insuranceExpiry) : (r.insuranceWho ? r.insuranceWho + ' <span class="muted">(renewal date not set)</span>' : '—'));
+  h += drow('Breakdown cover', r.breakdownExpiry ? dueCell(r.breakdownExpiry) : (r.breakdownWho ? r.breakdownWho + ' <span class="muted">(renewal date not set)</span>' : '<span class="muted">not set</span>'));
   h += drow('Outstanding recall', r.recall === 'YES' ? '<span class="due-bad">YES</span>' : r.recall);
   h += drow('Booked in', r.booked ? r.booked + (r.bookedDetail ? ' — ' + r.bookedDetail : '') : 'No');
   h += '<div class="dsec">Mileage</div>';
@@ -302,10 +303,14 @@ async function load() {
   }
 }
 
+const REFRESH_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-refresh-compliance';
 document.getElementById('refreshbtn').onclick = async function() {
   const b = this;
   b.disabled = true;
-  b.textContent = 'Refreshing…';
+  b.textContent = 'Checking DVSA…';
+  try { await fetch(REFRESH_URL + '?t=' + Date.now()); } catch (e) {}
+  await new Promise(r => setTimeout(r, 12000));
+  b.textContent = 'Reloading…';
   await load();
   b.disabled = false;
   b.textContent = '↻ Refresh';

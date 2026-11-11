@@ -222,8 +222,8 @@ function render(payload) {
     let h = '<div class="comp"><div class="comp-title">COMPLIANCE</div>';
     h += '<div class="row"><span class="label">MOT expiry</span>' + dueCell(c.motExpiry) + '</div>';
     h += '<div class="row"><span class="label">Next service</span>' + dueCell(c.nextServiceDue) + '</div>';
-    h += '<div class="row"><span class="label">Insurance</span>' + (c.insuranceExpiry ? dueCell(c.insuranceExpiry) : '<span>' + (c.leaseProvider === 'Owned' ? 'Owned' : (c.leaseProvider || '—')) + '</span>') + '</div>';
-    h += '<div class="row"><span class="label">Breakdown cover</span>' + dueCell(c.breakdownExpiry) + '</div>';
+    h += '<div class="row"><span class="label">Insurance</span>' + (c.insuranceExpiry ? dueCell(c.insuranceExpiry) : '<span>' + (c.insurer || (c.leaseProvider === 'Owned' ? 'Owned' : (c.leaseProvider || '—'))) + '</span>') + '</div>';
+    h += '<div class="row"><span class="label">Breakdown cover</span>' + (c.breakdownExpiry ? dueCell(c.breakdownExpiry) : '<span>' + (c.breakdownProvider || '—') + '</span>') + '</div>';
     h += '<div class="row"><span class="label">Road tax due</span>' + dueCell(c.taxDueDate) + '</div>';
     if (c.motOdometer) h += '<div class="row"><span class="label">Mileage at last MOT</span><span>' + Number(c.motOdometer).toLocaleString() + ' mi</span></div>';
     if (c.estOdometer) h += '<div class="row"><span class="label">Est. mileage now</span><span>' + Number(Math.round(c.estOdometer)).toLocaleString() + ' mi</span></div>';
@@ -305,8 +305,8 @@ function render(payload) {
     h += drow('Last MOT result', c.motLastResult || '—');
     h += drow('Next service', dueCell(c.nextServiceDue));
     h += drow('Road tax due', dueCell(c.taxDueDate));
-    h += drow('Insurance', c.insuranceExpiry ? dueCell(c.insuranceExpiry) : (c.leaseProvider === 'Owned' ? 'Owned' : (c.leaseProvider || '—')));
-    h += drow('Breakdown cover', dueCell(c.breakdownExpiry));
+    h += drow('Insurance', c.insuranceExpiry ? dueCell(c.insuranceExpiry) : (c.insurer ? c.insurer + ' <span class="muted">(renewal date not set)</span>' : (c.leaseProvider === 'Owned' ? 'Owned' : (c.leaseProvider || '—'))));
+    h += drow('Breakdown cover', c.breakdownExpiry ? dueCell(c.breakdownExpiry) : (c.breakdownProvider ? c.breakdownProvider + ' <span class="muted">(renewal date not set)</span>' : '<span class="muted">not set</span>'));
     h += drow('Outstanding recall', c.hasOutstandingRecall === 'true' ? '<span class="due-bad">YES</span>' : (c.hasOutstandingRecall === 'false' ? 'No' : 'unknown'));
     h += drow('Booked in', (c.bookedDate && daysTo(c.bookedDate) >= -1) ? isoDay(c.bookedDate) + (c.bookedDetail ? ' — ' + c.bookedDetail : '') : 'No');
     h += '<div class="dsec">Mileage</div>';
