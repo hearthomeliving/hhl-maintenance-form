@@ -114,6 +114,7 @@ var CERT_URL="https://ruthbloch.app.n8n.cloud/webhook/cert-data";
 var FLEET_URL="https://ruthbloch.app.n8n.cloud/webhook/fleet-data";
 var MAINT_URL="https://ruthbloch.app.n8n.cloud/webhook/maint-data";
 var DAY=864e5, SOON_CERT=60*DAY, SOON_FLEET=30*DAY;
+var EXCLUDE_HOMES={"Andy":1}; // fleet rows that aren't actual homes (a named person's van); add names here to hide them
 var ST={cert:null,fleet:null,maint:null,err:[]};
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
@@ -151,6 +152,7 @@ function build(){
   (fleet.vehicles||[]).forEach(function(v){var c=v.compliance||{};var o=hm(c.home);o.vN++;var url=c.registerTaskId?("https://app.clickup.com/t/"+c.registerTaskId):"";var nm=(c.make?(c.make+" "+(c.model||"")).trim():"");var reg=c.reg||v.Registration||"";function ck(d,lab){var t=ms(d);if(!t)return;if(t<now){o.vOver++;o.vItems.push({reg:reg,name:nm,what:lab,due:t,over:true,url:url});}else if(t<=now+SOON_FLEET){o.vSoon++;o.vItems.push({reg:reg,name:nm,what:lab,due:t,over:false,url:url});}}ck(c.motExpiry,"MOT");ck(c.taxDueDate,"Road tax");ck(c.nextServiceDue,"Service");});
   var homes=order.map(function(k){return H[k];});
   homes.sort(function(a,b){var sa=a.cOver*3+a.vOver*3+a.fHigh*2+a.cSoon+a.fOver+a.rOverdue,sb=b.cOver*3+b.vOver*3+b.fHigh*2+b.cSoon+b.fOver+b.rOverdue;return sb!==sa?sb-sa:(a.home<b.home?-1:1);});
+  homes=homes.filter(function(o){return !EXCLUDE_HOMES[o.home];});
   return {now:now,homes:homes,cert:cert,fleet:fleet,maint:maint};
 }
 
