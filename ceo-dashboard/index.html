@@ -1,0 +1,262 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CEO Maintenance Dashboard — Heart &amp; Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root{
+    --bg:#0b1016; --panel:#141b24; --panel-2:#1b242f;
+    --fg:#f1f5f9; --muted:#aab6c4; --faint:#73818f;
+    --border:#263038; --border-2:#394754;
+    --accent:#2dd4bf; --accent-ink:#a7f3ea;
+    --crit:#fb7185; --high:#60a5fa; --warn:#fbbf24; --ok:#4ade80; --low:#94a3b8;
+    --f:"Figtree",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#122130 0%,var(--bg) 60%);color:var(--fg);font-family:var(--f);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1200px;margin:0 auto;padding:20px 16px 56px}
+  header.hd{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-bottom:15px;border-bottom:1px solid var(--border)}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#0e7c86);display:flex;align-items:center;justify-content:center;font-weight:900;color:#06201f;font-size:15px;flex:0 0 auto}
+  h1{font-size:1.5rem;font-weight:900;margin:0;letter-spacing:-.025em}
+  .sub{color:var(--muted);font-size:.9rem;margin:2px 0 0}
+  .hd-right{display:flex;align-items:center;gap:14px}
+  .stamp{display:flex;align-items:center;gap:8px;font-size:.74rem;font-family:var(--mono);color:var(--faint)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px rgba(74,222,128,.14)}
+  .dot.err{background:var(--crit);box-shadow:0 0 0 4px rgba(251,113,133,.14)}
+  .rbtn{background:var(--panel);border:1px solid var(--border-2);color:var(--muted);border-radius:9px;padding:7px 12px;font:600 .82rem var(--f);cursor:pointer;display:flex;align-items:center;gap:6px}
+  .rbtn:hover{color:var(--fg);border-color:var(--accent)}
+  .rbtn .ic{display:inline-block}
+  .rbtn.spin .ic{animation:sp 1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .errbar{display:none;margin:16px 0 0;background:rgba(251,113,133,.09);border:1px solid rgba(251,113,133,.3);border-radius:11px;padding:10px 14px;font-size:.86rem;color:#ffd7dd}
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:20px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:15px;padding:15px 16px;position:relative;overflow:hidden}
+  .kpi::after{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--accent);opacity:.9}
+  .kpi.crit::after{background:var(--crit)} .kpi.warn::after{background:var(--warn)} .kpi.ok::after{background:var(--ok)}
+  .kpi .n{font-family:var(--mono);font-size:2rem;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+  .kpi.crit .n{color:var(--crit)} .kpi.warn .n{color:var(--warn)} .kpi.ok .n{color:var(--ok)}
+  .kpi .l{color:var(--muted);font-size:.8rem;margin-top:8px;font-weight:500}
+  .kpi .s{color:var(--faint);font-size:.76rem;margin-top:3px}
+  .sec{margin-top:30px}
+  .sec-h{display:flex;align-items:center;gap:10px;margin:0 0 13px}
+  .sec-h .bar{width:22px;height:3px;border-radius:3px;background:var(--accent)}
+  .sec-h span{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:6px 18px;overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:.9rem;min-width:560px}
+  th{text-align:center;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;padding:11px 10px;border-bottom:1px solid var(--border-2)}
+  th:first-child{text-align:left}
+  td{padding:11px 10px;border-bottom:1px solid var(--border);text-align:center;vertical-align:middle;font-variant-numeric:tabular-nums}
+  td:first-child{text-align:left;font-weight:700}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--panel-2)}
+  .chip{display:inline-block;min-width:20px;padding:2px 9px;border-radius:999px;font-weight:800;font-size:.78rem;font-variant-numeric:tabular-nums}
+  .c-crit{background:rgba(251,113,133,.16);color:var(--crit)}
+  .c-warn{background:rgba(251,191,36,.15);color:var(--warn)}
+  .c-ok{background:rgba(74,222,128,.14);color:var(--ok)}
+  .c-mut{background:rgba(148,163,184,.14);color:var(--low)}
+  .chip+.chip{margin-left:4px}
+  .z{color:var(--faint)}
+  .home-blk{margin:16px 0 4px}
+  .home-blk:first-child{margin-top:4px}
+  .home-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 7px}
+  .home-h b{font-size:1.02rem;font-weight:800}
+  .home-h .meta{color:var(--faint);font-size:.8rem}
+  .item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);font-size:.9rem}
+  .item:last-child{border-bottom:none}
+  .item .t{min-width:0}
+  .item .t .lk{color:var(--accent-ink)}
+  .item .t .tag{color:var(--faint);font-size:.8rem}
+  .item .r{white-space:nowrap;display:flex;align-items:center;gap:9px}
+  .item .due{color:var(--muted);font-family:var(--mono);font-size:.82rem}
+  .allok{color:var(--ok);font-size:.88rem;padding:8px 0}
+  .empty{color:var(--faint);font-size:.9rem;padding:10px 0}
+  .colwrap{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .foot{margin-top:30px;color:var(--faint);font-size:.8rem;border-top:1px solid var(--border);padding-top:14px;line-height:1.7}
+  .foot code{color:var(--accent-ink);font-family:var(--mono);font-size:.78rem}
+  .loading{text-align:center;color:var(--muted);padding:60px 0;font-size:.95rem}
+  @media(max-width:760px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .colwrap{grid-template-columns:1fr}
+    h1{font-size:1.3rem}
+  }
+</style>
+
+<div class="wrap">
+  <header class="hd">
+    <div class="brand">
+      <div class="logo">HH</div>
+      <div>
+        <h1>Maintenance — CEO Overview</h1>
+        <div class="sub">All homes, live from ClickUp</div>
+      </div>
+    </div>
+    <div class="hd-right">
+      <div class="stamp"><span class="dot" id="dot"></span><span id="stamp">Loading…</span></div>
+      <button class="rbtn" id="refresh" onclick="loadAll()"><span class="ic">&#8635;</span> Refresh</button>
+    </div>
+  </header>
+  <div class="errbar" id="errbar"></div>
+  <div id="body"><div class="loading">Loading the latest figures…</div></div>
+  <div class="foot">
+    Live snapshot, refreshes on its own every few minutes. Compliance and faults from the Property Certificates workspace, fleet from the vehicle register, routine and repairs from the maintenance board, all in ClickUp.
+    <br>Certificates flagged <b>due soon</b> within 60 days; fleet within 30 days. This page shows oversight figures only; open each item in ClickUp to act on it.
+  </div>
+</div>
+
+<script>
+var CERT_URL="https://ruthbloch.app.n8n.cloud/webhook/cert-data";
+var FLEET_URL="https://ruthbloch.app.n8n.cloud/webhook/fleet-data";
+var MAINT_URL="https://ruthbloch.app.n8n.cloud/webhook/maint-data";
+var DAY=864e5, SOON_CERT=60*DAY, SOON_FLEET=30*DAY;
+var ST={cert:null,fleet:null,maint:null,err:[]};
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function fmt(ms){if(!ms)return "";var d=new Date(ms);return isNaN(d)?"":d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});}
+function ms(x){if(x==null)return null;if(typeof x==="number")return x;var t=Date.parse(x);return isNaN(t)?null:t;}
+function clk(url){return url?(" href='"+esc(url)+"' target='_blank' rel='noopener'"):"";}
+
+async function jget(u){var r=await fetch(u+(u.indexOf("?")>-1?"&":"?")+"t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);var d=await r.json();return Array.isArray(d)?d[0]:d;}
+
+async function loadAll(){
+  var btn=document.getElementById("refresh");if(btn)btn.classList.add("spin");
+  var res=await Promise.allSettled([jget(CERT_URL),jget(FLEET_URL),jget(MAINT_URL)]);
+  ST.cert=res[0].status==="fulfilled"?res[0].value:null;
+  ST.fleet=res[1].status==="fulfilled"?res[1].value:null;
+  ST.maint=res[2].status==="fulfilled"?res[2].value:null;
+  ST.err=[];
+  if(!ST.cert)ST.err.push("certificates");
+  if(!ST.fleet)ST.err.push("fleet");
+  if(!ST.maint)ST.err.push("maintenance board");
+  try{render();}catch(e){document.getElementById("body").innerHTML="<div class='empty'>Something went wrong building the dashboard. Try Refresh.</div>";}
+  if(btn)btn.classList.remove("spin");
+}
+
+function build(){
+  var now=Date.now();
+  var cert=ST.cert||{certificates:[],faults:[],homes:[],reports:[]};
+  var fleet=ST.fleet||{vehicles:[],homes:[]};
+  var maint=ST.maint||{routine:[],counts:{},nr:{},contractorCompliance:{}};
+  var H={},order=[];
+  function hm(h){h=(h&&String(h).trim())||"Unassigned";if(!H[h]){H[h]={home:h,cOk:0,cSoon:0,cOver:0,cUnknown:0,cN:0,cItems:[],fHigh:0,fNormal:0,fLow:0,fOpen:0,fOver:0,fItems:[],rOverdue:0,rMissing:0,vN:0,vOver:0,vSoon:0,vItems:[]};order.push(h);}return H[h];}
+  (cert.homes||[]).forEach(hm);
+  (cert.certificates||[]).forEach(function(c){var o=hm(c.home);o.cN++;var e=c.expiry;if(e&&e<now){o.cOver++;o.cItems.push({name:c.name,due:e,kind:"over",url:c.url});}else if(c.state==="due-soon"){o.cSoon++;o.cItems.push({name:c.name,due:e,kind:"soon",url:c.url});}else if(!e||c.state==="unknown"){o.cUnknown++;o.cItems.push({name:c.name,due:null,kind:"unknown",url:c.url});}else o.cOk++;});
+  (cert.faults||[]).filter(function(f){return !f.closed;}).forEach(function(f){var o=hm(f.home);o.fOpen++;var sev=(f.severity||"").toLowerCase();if(sev==="high")o.fHigh++;else if(sev==="low")o.fLow++;else o.fNormal++;var over=f.due&&f.due<now;if(over)o.fOver++;if(sev==="high"||over)o.fItems.push({title:f.title,sev:sev,due:f.due,over:over,url:f.url});});
+  (maint.routine||[]).forEach(function(r){var o=hm(r.home);if(r.state==="overdue")o.rOverdue++;else if(r.state==="missing-report")o.rMissing++;});
+  (fleet.vehicles||[]).forEach(function(v){var c=v.compliance||{};var o=hm(c.home);o.vN++;var url=c.registerTaskId?("https://app.clickup.com/t/"+c.registerTaskId):"";var nm=(c.make?(c.make+" "+(c.model||"")).trim():"");var reg=c.reg||v.Registration||"";function ck(d,lab){var t=ms(d);if(!t)return;if(t<now){o.vOver++;o.vItems.push({reg:reg,name:nm,what:lab,due:t,over:true,url:url});}else if(t<=now+SOON_FLEET){o.vSoon++;o.vItems.push({reg:reg,name:nm,what:lab,due:t,over:false,url:url});}}ck(c.motExpiry,"MOT");ck(c.taxDueDate,"Road tax");ck(c.nextServiceDue,"Service");});
+  var homes=order.map(function(k){return H[k];});
+  homes.sort(function(a,b){var sa=a.cOver*3+a.vOver*3+a.fHigh*2+a.cSoon+a.fOver+a.rOverdue,sb=b.cOver*3+b.vOver*3+b.fHigh*2+b.cSoon+b.fOver+b.rOverdue;return sb!==sa?sb-sa:(a.home<b.home?-1:1);});
+  return {now:now,homes:homes,cert:cert,fleet:fleet,maint:maint};
+}
+
+function chip(n,cls){return "<span class='chip "+cls+"'>"+n+"</span>";}
+function kpi(n,l,s,cls){return "<div class='kpi "+(cls||"")+"'><div class='n'>"+n+"</div><div class='l'>"+l+"</div>"+(s?"<div class='s'>"+s+"</div>":"")+"</div>";}
+
+function render(){
+  var R=build(),homes=R.homes;
+  // stamp
+  var gen=Math.max(R.cert&&R.cert.generated||0, R.maint&&R.maint.generated||0, R.fleet&&R.fleet.generatedAt?Date.parse(R.fleet.generatedAt):0);
+  var dot=document.getElementById("dot"), stamp=document.getElementById("stamp");
+  stamp.textContent="Updated "+(gen?new Date(gen).toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}));
+  dot.className="dot"+(ST.err.length?" err":"");
+  var eb=document.getElementById("errbar");
+  if(ST.err.length){eb.style.display="block";eb.innerHTML="Couldn't load: "+ST.err.join(", ")+". Showing what's available; press Refresh to try again.";}else eb.style.display="none";
+  // totals
+  var t={cOver:0,cSoon:0,fHigh:0,fOpen:0,rOver:0,rMiss:0,vOver:0,vSoon:0};
+  homes.forEach(function(o){t.cOver+=o.cOver;t.cSoon+=o.cSoon;t.fHigh+=o.fHigh;t.fOpen+=o.fOpen;t.rOver+=o.rOverdue;t.rMiss+=o.rMissing;t.vOver+=o.vOver;t.vSoon+=o.vSoon;});
+  var counts=(R.maint&&R.maint.counts)||{};
+  var repairsOpen=(R.maint&&R.maint.nr&&R.maint.nr.open)||counts.nonRoutine||0;
+  var cc=(R.maint&&R.maint.contractorCompliance)||{};
+  var h="";
+  // KPI band
+  h+="<div class='kpis'>";
+  h+=kpi(homes.length,"Homes covered","",homes.length?"ok":"");
+  h+=kpi(t.cOver||t.cSoon||0,(t.cOver?"Certificates overdue":"Certificates due soon"),(t.cOver&&t.cSoon?t.cSoon+" more due soon":"within 60 days"),(t.cOver?"crit":(t.cSoon?"warn":"ok")));
+  h+=kpi(t.fHigh,"High-priority faults",t.fOpen+" open in total",(t.fHigh?"crit":"ok"));
+  h+=kpi(t.rOver,"Routine tasks overdue",(t.rMiss?t.rMiss+" missing a report":"recurring checks"),(t.rOver?"warn":"ok"));
+  h+=kpi(t.vOver||t.vSoon||0,(t.vOver?"Vehicles overdue":"Vehicles due soon"),"MOT, tax or service",(t.vOver?"crit":(t.vSoon?"warn":"ok")));
+  h+=kpi(repairsOpen,"Open repairs",(repairsOpen?"on the board":"board is clear"),(repairsOpen?"warn":"ok"));
+  h+="</div>";
+  // glance
+  h+="<div class='sec'><div class='sec-h'><span class='bar'></span><span>All homes at a glance</span></div><div class='card'><table><thead><tr><th>Home</th><th>Certificates</th><th>Faults</th><th>Routine checks</th><th>Fleet</th></tr></thead><tbody>";
+  if(!homes.length)h+="<tr><td colspan='5' class='z'>No data available.</td></tr>";
+  homes.forEach(function(o){
+    var cC=o.cOver?chip(o.cOver,"c-crit")+(o.cSoon?chip(o.cSoon,"c-warn"):""):(o.cSoon?chip(o.cSoon,"c-warn"):(o.cUnknown?chip(o.cUnknown,"c-mut"):(o.cN?chip("&#10003;","c-ok"):"<span class='z'>&mdash;</span>")));
+    var fC=o.fHigh?chip(o.fHigh+" high","c-crit"):(o.fOpen?chip(o.fOpen,"c-mut"):chip("&#10003;","c-ok"));
+    if(o.fOver&&!o.fHigh)fC=chip(o.fOver+" overdue","c-crit");
+    var rC=o.rOverdue?chip(o.rOverdue,"c-warn")+(o.rMissing?chip(o.rMissing,"c-mut"):""):(o.rMissing?chip(o.rMissing,"c-mut"):"<span class='z'>&mdash;</span>");
+    var vC=!o.vN?"<span class='z'>&mdash;</span>":(o.vOver?chip(o.vOver,"c-crit")+(o.vSoon?chip(o.vSoon,"c-warn"):""):(o.vSoon?chip(o.vSoon,"c-warn"):chip("&#10003;","c-ok")));
+    h+="<tr><td>"+esc(o.home)+"</td><td>"+cC+"</td><td>"+fC+"</td><td>"+rC+"</td><td>"+vC+"</td></tr>";
+  });
+  h+="</tbody></table></div></div>";
+  // two-column detail: certificates + fleet
+  h+="<div class='sec colwrap'>";
+  h+="<div><div class='sec-h'><span class='bar'></span><span>Certificates &amp; compliance</span></div><div class='card'>"+certBlock(homes)+"</div></div>";
+  h+="<div><div class='sec-h'><span class='bar'></span><span>Fleet, MOT &amp; servicing</span></div><div class='card'>"+fleetBlock(homes)+"</div></div>";
+  h+="</div>";
+  // faults full width
+  h+="<div class='sec'><div class='sec-h'><span class='bar'></span><span>Faults &amp; remedial actions</span></div><div class='card'>"+faultBlock(homes)+"</div></div>";
+  document.getElementById("body").innerHTML=h;
+}
+
+function certBlock(homes){
+  var any=false,out="";
+  homes.forEach(function(o){
+    var items=o.cItems.filter(function(x){return x.kind!=="unknown"?true:false;});
+    var show=o.cItems.slice().sort(function(a,b){var rk={over:0,soon:1,unknown:2};return rk[a.kind]-rk[b.kind]||((a.due||8.6e15)-(b.due||8.6e15));});
+    if(!o.cN)return;
+    any=true;
+    out+="<div class='home-blk'><div class='home-h'><b>"+esc(o.home)+"</b><span class='meta'>"+o.cN+" certificate"+(o.cN===1?"":"s")+", "+o.cOk+" in date</span></div>";
+    var att=show.filter(function(x){return x.kind!=="ok";});
+    if(!att.length){out+="<div class='allok'>&#10003; All certificates in date.</div></div>";return;}
+    att.forEach(function(it){
+      var cls=it.kind==="over"?"c-crit":(it.kind==="soon"?"c-warn":"c-mut");
+      var lab=it.kind==="over"?"Overdue":(it.kind==="soon"?"Due soon":"No date");
+      out+="<div class='item'><div class='t'><a class='lk'"+clk(it.url)+">"+esc(it.name)+"</a></div><div class='r'>"+(it.due?"<span class='due'>"+fmt(it.due)+"</span>":"")+chip(lab,cls)+"</div></div>";
+    });
+    out+="</div>";
+  });
+  return any?out:"<div class='empty'>No certificate data available.</div>";
+}
+
+function fleetBlock(homes){
+  var any=false,out="";
+  homes.forEach(function(o){
+    if(!o.vN)return;
+    any=true;
+    out+="<div class='home-blk'><div class='home-h'><b>"+esc(o.home)+"</b><span class='meta'>"+o.vN+" vehicle"+(o.vN===1?"":"s")+"</span></div>";
+    if(!o.vItems.length){out+="<div class='allok'>&#10003; MOT, tax and service all in date.</div></div>";return;}
+    o.vItems.slice().sort(function(a,b){return (a.over===b.over)?((a.due||0)-(b.due||0)):(a.over?-1:1);}).forEach(function(it){
+      var cls=it.over?"c-crit":"c-warn",lab=it.over?"Overdue":"Due soon";
+      out+="<div class='item'><div class='t'><a class='lk'"+clk(it.url)+">"+esc(it.what)+" &middot; "+esc(it.reg)+"</a>"+(it.name?" <span class='tag'>"+esc(it.name)+"</span>":"")+"</div><div class='r'><span class='due'>"+fmt(it.due)+"</span>"+chip(lab,cls)+"</div></div>";
+    });
+    out+="</div>";
+  });
+  return any?out:"<div class='empty'>No fleet data available.</div>";
+}
+
+function faultBlock(homes){
+  var any=false,out="";
+  homes.forEach(function(o){
+    if(!o.fOpen)return;
+    any=true;
+    var extra=o.fOpen-o.fItems.length;
+    out+="<div class='home-blk'><div class='home-h'><b>"+esc(o.home)+"</b><span class='meta'>"+o.fOpen+" open &middot; "+o.fHigh+" high, "+o.fNormal+" normal, "+o.fLow+" low</span></div>";
+    o.fItems.slice().sort(function(a,b){if(a.over!==b.over)return a.over?-1:1;var sr={high:0,normal:1,low:2};return (sr[a.sev]||1)-(sr[b.sev]||1)||((a.due||8.6e15)-(b.due||8.6e15));}).forEach(function(it){
+      var sevCls=it.sev==="high"?"c-crit":(it.sev==="low"?"c-mut":"c-warn");
+      out+="<div class='item'><div class='t'><a class='lk'"+clk(it.url)+">"+esc(it.title)+"</a> "+chip(it.sev||"normal",sevCls)+"</div><div class='r'>"+(it.due?"<span class='due'>due "+fmt(it.due)+"</span>":"")+(it.over?chip("Overdue","c-crit"):"")+"</div></div>";
+    });
+    if(extra>0)out+="<div class='item'><div class='t z'>+ "+extra+" more normal/low fault"+(extra===1?"":"s")+" open</div><div class='r'></div></div>";
+    out+="</div>";
+  });
+  return any?out:"<div class='allok'>&#10003; No open faults across the homes.</div>";
+}
+
+loadAll();
+setInterval(loadAll, 5*60*1000);
+</script>
