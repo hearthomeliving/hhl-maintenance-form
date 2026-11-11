@@ -243,4 +243,6 @@ function fleetBlock(homes){
 
 loadAll();
 setInterval(loadAll, 5*60*1000);
+// Fully reload every 20 minutes (cache-busted) so page/structure changes from a new deploy appear in the embed on their own, not just the 5-minute data refresh.
+setTimeout(function(){ try{ location.replace(location.pathname+"?r="+Date.now()); }catch(e){ location.reload(); } }, 20*60*1000);
 </script>
