@@ -98,7 +98,7 @@
     </div>
     <div class="hd-right">
       <div class="stamp"><span class="dot" id="dot"></span><span id="stamp">Loading…</span></div>
-      <button class="rbtn" id="refresh" onclick="loadAll()"><span class="ic">&#8635;</span> Refresh</button>
+      <button class="rbtn" id="refresh" onclick="loadAll(true)"><span class="ic">&#8635;</span> Refresh</button>
     </div>
   </header>
   <div class="errbar" id="errbar"></div>
@@ -124,7 +124,10 @@ function clk(url){return url?(" href='"+esc(url)+"' target='_blank' rel='noopene
 
 async function jget(u){var r=await fetch(u+(u.indexOf("?")>-1?"&":"?")+"t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);var d=await r.json();return Array.isArray(d)?d[0]:d;}
 
-async function loadAll(){
+var CACHE_KEY="ceoDashData_v1", DAY_MS=24*60*60*1000;
+function saveCache(){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify({at:Date.now(),cert:ST.cert,fleet:ST.fleet,maint:ST.maint})); }catch(e){} }
+function loadCache(){ try{ var s=localStorage.getItem(CACHE_KEY); if(!s)return null; var d=JSON.parse(s); return (d&&typeof d.at==="number")?d:null; }catch(e){ return null; } }
+async function fetchFresh(){
   var btn=document.getElementById("refresh");if(btn)btn.classList.add("spin");
   var res=await Promise.allSettled([jget(CERT_URL),jget(FLEET_URL),jget(MAINT_URL)]);
   ST.cert=res[0].status==="fulfilled"?res[0].value:null;
@@ -134,8 +137,17 @@ async function loadAll(){
   if(!ST.cert)ST.err.push("certificates");
   if(!ST.fleet)ST.err.push("fleet");
   if(!ST.maint)ST.err.push("maintenance board");
+  if(ST.cert||ST.fleet||ST.maint)saveCache();
   try{render();}catch(e){document.getElementById("body").innerHTML="<div class='empty'>Something went wrong building the dashboard. Try Refresh.</div>";}
   if(btn)btn.classList.remove("spin");
+}
+// force=true (the Refresh button, or the once-a-day timer) always pulls live. Otherwise show the saved copy
+// instantly if it is under a day old, so simply opening the dashboard does not re-pull every time.
+function loadAll(force){
+  if(force===true)return fetchFresh();
+  var c=loadCache();
+  if(c && (Date.now()-c.at)<DAY_MS){ ST.cert=c.cert;ST.fleet=c.fleet;ST.maint=c.maint;ST.err=[]; try{render();}catch(e){} return; }
+  return fetchFresh();
 }
 
 function build(){
@@ -241,8 +253,6 @@ function fleetBlock(homes){
 }
 
 
-loadAll();
-setInterval(loadAll, 5*60*1000);
-// Fully reload every 20 minutes (cache-busted) so page/structure changes from a new deploy appear in the embed on their own, not just the 5-minute data refresh.
-setTimeout(function(){ try{ location.replace(location.pathname+"?r="+Date.now()); }catch(e){ location.reload(); } }, 20*60*1000);
+loadAll();                                      // on open: show the saved copy if it is under a day old, else pull live
+setInterval(function(){ loadAll(true); }, DAY_MS); // if left open, refresh once a day on its own
 </script>
