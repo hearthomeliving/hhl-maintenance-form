@@ -2,7 +2,7 @@
 // Cache-first for the shell, network-first for the webhook POST (which is never cached).
 // Version bump invalidates the cache on next deploy.
 
-const CACHE_VERSION = 'hahl-maintenance-v10-power-check';
+const CACHE_VERSION = 'hahl-maintenance-v11-ceo-dash';
 const SHELL = [
   './',
   './index.html',
@@ -30,6 +30,8 @@ self.addEventListener('fetch', function (event) {
   // Never cache the webhook POSTs; let them go straight to the network.
   if (event.request.method !== 'GET') return;
   if (url.hostname.endsWith('n8n.cloud') || url.hostname.endsWith('ruthbloch.app.n8n.cloud')) return;
+  // The CEO dashboard is a live page: always fetch it fresh, never cache, so edits show without a cache bump.
+  if (url.pathname.indexOf('/ceo-dashboard') === 0) return;
   // Cache-first for the shell.
   event.respondWith(
     caches.match(event.request).then(function (cached) {
