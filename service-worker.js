@@ -2,7 +2,7 @@
 // Cache-first for the shell, network-first for the webhook POST (which is never cached).
 // Version bump invalidates the cache on next deploy.
 
-const CACHE_VERSION = 'hahl-maintenance-v12-fleet-nocache';
+const CACHE_VERSION = 'hahl-maintenance-v13-carlog-nocache';
 const SHELL = [
   './',
   './index.html',
@@ -34,6 +34,8 @@ self.addEventListener('fetch', function (event) {
   if (url.pathname.indexOf('/ceo-dashboard') === 0) return;
   // The fleet dashboards and register are live pages too: always fetch fresh, never cache.
   if (url.pathname.indexOf('/Fleet_') === 0) return;
+  // The Car Log app has its own service worker under /car-log/: leave it alone.
+  if (url.pathname.indexOf('/car-log') === 0) return;
   // Cache-first for the shell.
   event.respondWith(
     caches.match(event.request).then(function (cached) {

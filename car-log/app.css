@@ -1,0 +1,52 @@
+:root { --bg:#f4f6f9; --card:#fff; --ink:#1f2733; --muted:#6b7686; --border:#e3e8ef; --brand:#0c4145; --brand2:#12656b; --green:#16a34a; --red:#dc2626; --amber:#d97706; }
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html, body { background:var(--bg); }
+body { font-family:-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); min-height:100vh; }
+header { background:var(--brand); color:#fff; padding:14px 18px; padding-top:calc(14px + env(safe-area-inset-top)); display:flex; align-items:center; gap:10px; }
+header h1 { font-size:18px; font-weight:700; flex:1; }
+header .home { font-size:14px; font-weight:600; background:rgba(255,255,255,.15); padding:4px 10px; border-radius:20px; }
+main { max-width:520px; margin:0 auto; padding:18px 16px 40px; }
+h2 { font-size:20px; margin:4px 0 14px; }
+.hint { font-size:14px; color:var(--muted); margin:-6px 0 14px; line-height:1.4; }
+.screen { display:none; }
+.screen.on { display:block; }
+
+/* Car buttons */
+.cars { display:grid; gap:12px; }
+.car { display:flex; align-items:center; gap:14px; width:100%; text-align:left; background:var(--card); border:2px solid var(--border); border-radius:16px; padding:16px; cursor:pointer; font-family:inherit; color:inherit; min-height:88px; }
+.car:active { border-color:var(--brand2); background:#eef7f7; }
+.plate { font-family:"Arial Narrow",Arial,sans-serif; font-weight:800; font-size:24px; letter-spacing:1px; background:#ffd307; color:#111; border:2px solid #111; border-radius:6px; padding:4px 10px; white-space:nowrap; }
+.car .desc { font-size:15px; color:var(--muted); line-height:1.35; }
+.car .desc b { display:block; color:var(--ink); font-size:16px; }
+.dot { display:inline-block; width:12px; height:12px; border-radius:50%; border:1px solid rgba(0,0,0,.25); vertical-align:-1px; margin-right:5px; }
+
+/* Picked car summary on screen 2 */
+.picked { display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px 14px; margin-bottom:6px; }
+.picked .plate { font-size:20px; }
+.picked .desc { font-size:14px; color:var(--muted); flex:1; }
+.link { background:none; border:0; color:var(--brand2); font-weight:700; font-size:15px; cursor:pointer; padding:8px 4px; font-family:inherit; }
+
+label { display:block; font-size:15px; font-weight:700; margin:18px 0 6px; }
+select, input[type=text] { width:100%; padding:14px; border:2px solid var(--border); border-radius:12px; font-size:17px; background:#fff; color:var(--ink); font-family:inherit; appearance:none; -webkit-appearance:none; }
+select { background-image:linear-gradient(45deg,transparent 50%,#667 50%),linear-gradient(135deg,#667 50%,transparent 50%); background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%; background-size:6px 6px; background-repeat:no-repeat; padding-right:38px; }
+select:focus, input:focus { outline:none; border-color:var(--brand2); }
+#otherWrap { display:none; margin-top:8px; }
+.err { color:var(--red); font-size:14px; margin-top:6px; display:none; }
+button.main { width:100%; margin-top:26px; padding:18px; background:var(--brand); color:#fff; border:0; border-radius:14px; font-size:19px; font-weight:800; cursor:pointer; font-family:inherit; }
+button.main:disabled { opacity:.5; }
+
+/* Done screen */
+.done { text-align:center; padding-top:30px; }
+.tick { width:96px; height:96px; border-radius:50%; background:var(--green); color:#fff; font-size:56px; line-height:96px; margin:0 auto 18px; }
+.tick.warn { background:var(--amber); }
+.done h2 { font-size:24px; }
+.done p { font-size:16px; color:var(--muted); line-height:1.5; margin-top:6px; }
+.done .when { font-size:18px; color:var(--ink); font-weight:700; margin-top:14px; }
+
+.notice { background:#fff7e6; border:1px solid #f5d38a; color:#7a4b00; border-radius:12px; padding:12px 14px; font-size:14px; line-height:1.45; margin-bottom:14px; display:none; }
+.notice.bad { background:#fee2e2; border-color:#fca5a5; color:#991b1b; }
+.homes { display:grid; gap:10px; }
+.homes button, .homebtn { padding:18px; font-size:18px; font-weight:700; background:var(--card); border:2px solid var(--border); border-radius:14px; font-family:inherit; cursor:pointer; }
+.loading { color:var(--muted); font-size:15px; padding:30px 0; text-align:center; }
+footer { text-align:center; font-size:12px; color:var(--muted); padding:10px 16px 30px; }
+.homebtn { display:block; text-align:center; color:var(--ink); text-decoration:none; }

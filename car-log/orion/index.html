@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0c4145">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Orion Car Log">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="../icon-192.png">
+<link rel="icon" href="../icon-192.png">
+<link rel="stylesheet" href="../app.css?v=mwdui9yd">
+<title>Orion Car Log</title>
+</head>
+<body>
+<header><h1>Car Log</h1><span class="home" id="homeTag"></span></header>
+<main>
+  <div class="notice" id="queueNote"></div>
+
+  <!-- Screen 0: pick a home (only if the link had no ?home=) -->
+  <section class="screen" id="s0">
+    <h2>Pick your home</h2>
+    <p class="hint">Open your home, then use "Add to Home Screen" so the phone keeps it.</p>
+    <div class="homes" id="homeList"></div>
+  </section>
+
+  <!-- Screen 1: pick the car -->
+  <section class="screen" id="s1">
+    <h2>Which car are you taking?</h2>
+    <div class="cars" id="cars"><div class="loading">Loading cars&hellip;</div></div>
+  </section>
+
+  <!-- Screen 2: who and which YP -->
+  <section class="screen" id="s2">
+    <div class="picked" id="picked"></div>
+    <button class="link" id="back">&larr; Wrong car? Go back</button>
+
+    <label for="driver">Who is driving?</label>
+    <select id="driver"></select>
+    <div id="otherWrap"><input type="text" id="driverOther" placeholder="Type your full name" autocomplete="name"></div>
+    <div class="err" id="driverErr">Please pick who is driving.</div>
+
+    <label for="yp">Which young person is with you?</label>
+    <select id="yp"></select>
+    <div class="err" id="ypErr">Please pick a young person, or "No YP - errand".</div>
+
+    <button class="main" id="submit">Sign out car</button>
+  </section>
+
+  <!-- Screen 3: done -->
+  <section class="screen" id="s3">
+    <div class="done">
+      <div class="tick" id="tick">&#10003;</div>
+      <h2 id="doneTitle">Car signed out</h2>
+      <p class="when" id="doneWhen"></p>
+      <p id="doneText"></p>
+    </div>
+  </section>
+</main>
+<footer id="foot"></footer>
+
+<script>window.CARLOG_BASE = '../'; window.CARLOG_HOME = 'Orion';</script>
+<script src="../app.js?v=mwdui9yd"></script>
+</body>
+</html>
