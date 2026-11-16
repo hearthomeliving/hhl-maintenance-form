@@ -56,14 +56,15 @@
   <div class="tablewrap" id="tablewrap" style="display:none">
     <table>
       <thead><tr>
-        <th>Reg</th><th>Vehicle</th><th>Home</th><th>Contract used</th><th></th>
+        <th>Reg</th><th>Vehicle</th><th>Home</th><th>Current mileage</th><th>Contract used</th><th></th>
         <th>Vs allowance today</th><th>Projected at lease end</th><th>Excess miles</th><th>Rate</th><th>Projected cost</th><th>Lease ends</th>
       </tr></thead>
       <tbody id="tbody"></tbody>
     </table>
   </div>
   <div class="note">
-    Mileages are GPS estimates anchored on MOT odometer readings and slightly understate road miles.
+    Current mileage comes from the car's tracker once its starting mileage has been set in TrackIt247 (marked "tracker");
+    until then it is a GPS estimate anchored on MOT odometer readings (marked "estimate"), which slightly understates road miles.
     Lease start is taken as 36 months before the Arval end date. "Vs allowance today" compares miles used with the
     pro-rata share of the contract allowance. Projections assume driving continues at the average rate so far;
     Arval's own figures at lease end will be slightly higher. Owned vehicles (no mileage contract) are not listed.
@@ -77,15 +78,23 @@ function fmtReg(r) {
 }
 const gbp = x => '£' + Math.round(x).toLocaleString('en-GB');
 const num = x => Math.round(x).toLocaleString('en-GB');
-function calc(c) {
-  if (!c || c.leaseProvider === 'Owned' || !c.leaseEnd || !c.contractMileage || !c.estOdometer || c.contractStartMileage === null || c.contractStartMileage === undefined) return null;
+function currentOdo(c, v) {
+  const t = Number(v && (v.Odometer || v.FleetOdometer)) || 0;
+  const floor = Math.max(Number(c.motOdometer) || 0, Number(c.contractStartMileage) || 0, 1000);
+  if (t >= floor) return { odo: t, src: 'tracker' };
+  if (c.estOdometer) return { odo: Number(c.estOdometer), src: 'estimate' };
+  return null;
+}
+function calc(c, v) {
+  const cur = c ? currentOdo(c, v) : null;
+  if (!c || c.leaseProvider === 'Owned' || !c.leaseEnd || !c.contractMileage || !cur || c.contractStartMileage === null || c.contractStartMileage === undefined) return null;
   const end = new Date(c.leaseEnd);
   const start = new Date(end);
   start.setMonth(start.getMonth() - 36);
   const now = new Date();
   const frac = (now - start) / (end - start);
   if (!(frac > 0) || frac >= 1.5) return null;
-  const used = c.estOdometer - c.contractStartMileage;
+  const used = cur.odo - c.contractStartMileage;
   if (!(used > 0)) return null;
   const cm = Number(c.contractMileage);
   const allow = cm * frac;
@@ -97,7 +106,7 @@ function calc(c) {
     reg: fmtReg(c.reg),
     car: ((c.make || '') + ' ' + (c.model || '')).trim() || '—',
     home: c.home || '—',
-    used, cm, frac, overNow, proj, exc, rate,
+    used, cm, frac, overNow, proj, exc, rate, odo: cur.odo, src: cur.src,
     cost: exc * rate / 100,
     endDay: String(c.leaseEnd).slice(0, 10)
   };
@@ -108,8 +117,8 @@ function barHtml(r) {
   return '<div class="bar"><i style="width:' + pct + '%;background:' + col + '"></i></div>';
 }
 function draw(payload) {
-  const comps = (payload.vehicles || []).map(v => v.compliance).concat(payload.untracked || []).filter(Boolean);
-  const rows = comps.map(calc).filter(Boolean).sort((a, b) => b.cost - a.cost);
+  const pairs = (payload.vehicles || []).filter(v => v.compliance).map(v => [v.compliance, v]).concat((payload.untracked || []).map(c => [c, null]));
+  const rows = pairs.map(p => calc(p[0], p[1])).filter(Boolean).sort((a, b) => b.cost - a.cost);
   const tb = document.getElementById('tbody');
   tb.innerHTML = rows.map(r => {
     const vs = r.overNow > 0
@@ -118,6 +127,7 @@ function draw(payload) {
     const usedTxt = num(r.used) + ' / ' + num(r.cm) + ' mi' + (r.used >= r.cm ? ' <span class="bad">(allowance used up)</span>' : '');
     const costTxt = r.cost > 0 ? '<span class="cost bad">' + gbp(r.cost) + '</span>' : '<span class="ok">£0</span>';
     return '<tr><td><span class="reg">' + r.reg + '</span></td><td>' + r.car + '</td><td>' + r.home + '</td>' +
+      '<td>' + num(r.odo) + ' mi <span class="muted" style="font-size:11px">' + (r.src === 'tracker' ? 'tracker' : 'estimate') + '</span></td>' +
       '<td>' + usedTxt + '</td><td>' + barHtml(r) + '</td><td>' + vs + '</td>' +
       '<td>' + num(r.proj) + ' mi</td><td>' + (r.exc > 0 ? num(r.exc) : '<span class="muted">—</span>') + '</td>' +
       '<td>' + (r.rate ? r.rate + 'p' : '—') + '</td><td>' + costTxt + '</td><td>' + r.endDay + '</td></tr>';
