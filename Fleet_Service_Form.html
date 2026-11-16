@@ -53,6 +53,7 @@
     <div id="vehwrap">
     <label for="reg">Vehicle</label>
     <select id="reg"><option value="">Loading vehicles…</option></select>
+    <div id="carinfo" style="display:none;font-size:13px;color:var(--muted);margin:6px 0 2px"></div>
     </div>
     <div id="fields-booking">
       <label for="bdate">Booked date</label>
@@ -161,8 +162,19 @@ async function loadProfiles() {
     const res = await fetch(PROFILES_URL + '?t=' + Date.now());
     const out = await res.json();
     (out.homes || []).forEach(function(h) { profiles[h.home] = h; });
+    fillHomeLists();
     fillContacts();
   } catch (e) {}
+}
+function fillHomeLists() {
+  const homes = Object.keys(profiles).sort();
+  if (!homes.length) return;
+  ['mhome', 'chome'].forEach(function(id) {
+    const sel = document.getElementById(id);
+    const keep = sel.value;
+    sel.innerHTML = '<option value="">Select a home…</option>' + homes.map(function(x) { return '<option>' + x + '</option>'; }).join('');
+    if (keep && homes.indexOf(keep) >= 0) sel.value = keep;
+  });
 }
 function fillContacts() {
   const h = profiles[document.getElementById('chome').value];
@@ -174,6 +186,7 @@ function fillContacts() {
 
 let mode = 'booking';
 let vehMap = {};
+let trackMap = {};
 
 function isoDay(x) {
   if (!x) return null;
@@ -183,7 +196,31 @@ function isoDay(x) {
   return t.toISOString().slice(0, 10);
 }
 
+function agoTxt(s) {
+  const m = Math.round((Date.now() - new Date(String(s || '').replace(' ', 'T'))) / 6e4);
+  if (isNaN(m)) return 'unknown';
+  if (m < 1) return 'just now';
+  if (m < 60) return m + ' min ago';
+  const hr = Math.floor(m / 60);
+  return hr < 48 ? hr + 'h ' + (m % 60) + 'm ago' : Math.floor(hr / 24) + ' days ago';
+}
+function showCarInfo() {
+  const el = document.getElementById('carinfo');
+  const reg = document.getElementById('reg').value;
+  const c = vehMap[reg];
+  if (!c || mode === 'contacts') { el.style.display = 'none'; return; }
+  const v = trackMap[reg];
+  const odo = v ? Number(v.Odometer || v.FleetOdometer) || 0 : 0;
+  const parts = [];
+  if (c.home) parts.push(c.home + ' House');
+  parts.push('Current mileage: ' + (v ? (odo > 0 ? Math.round(odo).toLocaleString('en-GB') + ' mi' : 'not set yet') : 'no tracker'));
+  if (c.estOdometer) parts.push('estimated ' + Math.round(c.estOdometer).toLocaleString('en-GB') + ' mi');
+  if (v) parts.push('tracker updated ' + agoTxt(v.LastCommTime || v.PositionTime));
+  el.textContent = parts.join(' · ');
+  el.style.display = 'block';
+}
 function showCurrent() {
+  showCarInfo();
   const box = document.getElementById('current');
   const reg = document.getElementById('reg').value;
   const c = vehMap[reg];
@@ -271,6 +308,7 @@ async function loadVehicles() {
       if (!c || !c.reg || seen.has(c.reg)) return;
       seen.add(c.reg);
       vehMap[c.reg] = c;
+      if (v.Registration) trackMap[c.reg] = v;
       const regFmt = c.reg.length === 7 ? c.reg.slice(0, 4) + ' ' + c.reg.slice(4) : c.reg;
       const label = regFmt + ' — ' + ((c.make || '') + ' ' + (c.model || '')).trim() + (c.colour ? ' (' + c.colour + ')' : '');
       opts.push('<option value="' + c.reg + '">' + label + '</option>');
