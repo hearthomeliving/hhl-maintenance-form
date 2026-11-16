@@ -71,7 +71,7 @@
     <tbody id="tbody"></tbody>
   </table>
 </div>
-<footer>Click a vehicle for full details · Click a column heading to sort · Data refreshes every 5 minutes</footer>
+<footer>Click a vehicle for full details · Click a column heading to sort · Data refreshes every 2 minutes</footer>
 <div id="overlay"><div class="detail" id="detail"></div></div>
 <script>
 const DATA_URL = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-data';
@@ -91,6 +91,7 @@ const COLS = [
   { key: 'home', label: 'Home' },
   { key: 'ownership', label: 'Owned / Leased' },
   { key: 'colour', label: 'Colour' },
+  { key: 'mileage', label: 'Current Mileage' },
   { key: 'motExpiry', label: 'MOT' },
   { key: 'booked', label: 'Booked' },
   { key: 'taxDueDate', label: 'Tax Due' }
@@ -108,6 +109,16 @@ function isoDay(x) {
   return t.toISOString().slice(0, 10);
 }
 function d10(x) { return isoDay(x) || ''; }
+function ago(s) {
+  if (!s) return 'unknown';
+  const m = Math.round((Date.now() - new Date(String(s).replace(' ', 'T'))) / 6e4);
+  if (isNaN(m)) return String(s);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + ' min ago';
+  const hr = Math.floor(m / 60);
+  if (hr < 48) return hr + 'h ' + (m % 60) + 'm ago';
+  return Math.floor(hr / 24) + ' days ago';
+}
 function daysTo(dateStr) {
   const s = isoDay(dateStr);
   if (!s) return null;
@@ -162,6 +173,9 @@ function toRow(v) {
     motLastResult: c.motLastResult || '',
     motOdometer: c.motOdometer || null,
     estOdometer: c.estOdometer ? Math.round(c.estOdometer) : null,
+    mileage: Number(v.Odometer || v.FleetOdometer) > 0 ? Math.round(Number(v.Odometer || v.FleetOdometer)) : null,
+    tracked: !!v.Registration,
+    lastSeen: v.LastCommTime || v.PositionTime || '',
     milesMonth: (c.estOdometer && (c.odoMonthStart || c.odoMonthStart === 0)) ? Math.round(c.estOdometer - c.odoMonthStart) : null,
     nextServiceDue: c.nextServiceDue || null,
     insuranceExpiry: c.insuranceExpiry || null,
@@ -203,6 +217,7 @@ function cellHtml(row, col) {
     return val ? '<span class="pill comp-ok">YES · ' + val + '</span>' : '<span class="pill comp-none">NO</span>';
   }
   if (col.key === 'taxDueDate') return dueCell(val);
+  if (col.key === 'mileage') return val ? Number(val).toLocaleString('en-GB') + ' mi' : '<span class="muted">' + (row.tracked ? 'not set yet' : 'no tracker') + '</span>';
   return val ? String(val) : '<span class="muted">—</span>';
 }
 
@@ -232,6 +247,7 @@ function openDetail(r) {
   h += drow('Outstanding recall', r.recall === 'YES' ? '<span class="due-bad">YES</span>' : r.recall);
   h += drow('Booked in', r.booked ? r.booked + (r.bookedDetail ? ' — ' + r.bookedDetail : '') : 'No');
   h += '<div class="dsec">Mileage</div>';
+  h += drow('Current mileage', r.mileage ? Number(r.mileage).toLocaleString('en-GB') + ' mi' : '<span class="muted">' + (r.tracked ? 'not set yet' : 'no tracker') + '</span>');
   h += drow('Mileage at last MOT', num(r.motOdometer));
   h += drow('Estimated mileage now', num(r.estOdometer));
   h += drow('Miles this month', num(r.milesMonth));
@@ -246,6 +262,7 @@ function openDetail(r) {
   h += drow('Servicing', r.serviceGarage || '—');
   h += drow('MOT garage', r.motGarage || '—');
   h += drow('Last DVSA check', r.lastChecked || '—');
+  h += drow('Tracker last update', r.tracked ? ago(r.lastSeen) : '<span class="muted">no tracker</span>');
   if (r.advisories) h += '<div class="dwide">MOT advisories: ' + r.advisories + '</div>';
   h += '<div class="dwide" style="color:var(--muted)">Last known location: ' + (r.liveAddress || 'unknown') + '</div>';
   h += '</div>';
@@ -317,7 +334,7 @@ document.getElementById('refreshbtn').onclick = async function() {
 };
 
 load();
-setInterval(load, 300000);
+setInterval(load, 120000);
 </script>
 </body>
 </html>
