@@ -1264,7 +1264,7 @@ const state = {
   name: '',
   role: ROLES[0],
   home: '',
-  contactMethod: 'WhatsApp',
+  contactMethod: 'Email',
   contactValue: '',
   emergencyTicked: [],
   emergencyLogged: false,
@@ -1372,14 +1372,13 @@ function renderStep0() {
 
   screen.appendChild(field('Your name', textField('name', state.name, 'Sarah K'), null, true));
   screen.appendChild(field('Your role', selectField('role', state.role, ROLES), null, true));
-  screen.appendChild(field('Best way to reach you', selectField('contactMethod', state.contactMethod, ['WhatsApp', 'Phone call', 'Email']), null, true));
-  screen.appendChild(field('Contact number or email', textField('contactValue', state.contactValue, 'e.g. 07700 900123 or sarah@hearthomeliving.co.uk'), null, true));
+  screen.appendChild(field('Your email address', textField('contactValue', state.contactValue, 'e.g. sarah@hearthomeliving.co.uk'), 'We email a copy of this report, with your photos, to you and the home inbox.', true));
 
   screen.appendChild(navButtons({ back: false, onNext: () => {
     if (!state.home) { alert('Please choose which home you are in.'); return; }
     if (!state.name.trim()) { alert('Your name is required.'); return; }
-    if (!state.contactValue.trim()) { alert('Contact number or email is required.'); return; }
-    if (state.contactMethod === 'Email' && !state.contactValue.includes('@')) { alert('That does not look like an email address.'); return; }
+    if (!state.contactValue.trim()) { alert('Your email address is required.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.contactValue.trim())) { alert('Please enter a valid email address.'); return; }
     state.step = 1; render();
   } }));
 }
@@ -2239,11 +2238,11 @@ function renderStep8() {
 
   const next = el('div', { class: 'next-steps', style: 'margin-top: 12px;' });
   next.innerHTML = '<strong>What happens next (in production):</strong><br>' +
-    '. You get a WhatsApp confirmation within a minute.<br>' +
+    '. You get an email confirmation within a minute, with your photos attached.<br>' +
     '. Mark gets notified at his preferred channel based on severity.<br>' +
     '. A contractor matching the category gets emailed within the hour with your photos and SOP results.<br>' +
     '. If Severity is Urgent and Mark does not acknowledge in 5 minutes, Ruth is alerted.<br>' +
-    '. Reply to your WhatsApp with the reference number anytime to check status.';
+    '. The home inbox is copied in too, so the office has a record.';
   screen.appendChild(next);
 
   if (settings.debug_mode) {
