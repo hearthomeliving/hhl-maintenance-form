@@ -1,12 +1,13 @@
 // ---- Settings -------------------------------------------------------------
 var DATA_URL   = 'https://ruthbloch.app.n8n.cloud/webhook/car-log-data';   // GET ?home=X -> {vehicles, staff, yps}
 var SUBMIT_URL = 'https://ruthbloch.app.n8n.cloud/webhook/car-log-submit'; // POST one sign-out
+var CHECKIN_URL = 'https://ruthbloch.app.n8n.cloud/webhook/car-log-checkin'; // POST {id, home} = "I'm back"
 var FLEET_URL  = 'https://ruthbloch.app.n8n.cloud/webhook/fleet-data';     // fallback for the car list
 var HOMES = ['Aurora','Cygnus','Leo','Lynx','Lyra','Orion'];
 var NO_YP = 'No YP - errand';
 var OTHER = '__other__';
 var DONE_SECONDS = 4;
-var VERSION = 'v0.2';
+var VERSION = 'v0.3';
 
 // ---- Helpers --------------------------------------------------------------
 function el(id){ return document.getElementById(id); }
@@ -17,6 +18,14 @@ function uid(){ return 'cl-' + Date.now().toString(36) + '-' + Math.random().toS
 function fmtWhen(iso){ var d=new Date(iso); return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) + ' at ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
 var COLOURS = { white:'#fff', silver:'#c0c4c8', grey:'#808890', gray:'#808890', black:'#111', red:'#d22', blue:'#2563eb', yellow:'#facc15', green:'#16a34a', orange:'#f97316', brown:'#7c4a1e' };
 function colourDot(c){ var k=String(c||'').toLowerCase(); for(var n in COLOURS){ if(k.indexOf(n)>=0) return '<span class="dot" style="background:'+COLOURS[n]+'"></span>'; } return ''; }
+function shortTime(iso){ var d=new Date(iso); if(isNaN(d)) return ''; var t=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); return (new Date().toDateString()===d.toDateString()) ? t : d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+' '+t; }
+function trackerBadge(t){
+  t = t || {};
+  if (t.status === 'home') return '<br><span class="badge in">At home</span>';
+  if (t.status === 'away') return '<br><span class="badge warn">Tracker: not at home' + (t.miles != null ? ' (' + t.miles + ' mi)' : '') + '</span>';
+  if (t.status === 'moving') return '<br><span class="badge warn">Tracker: on the move</span>';
+  return '';
+}
 function normHome(h){ h=String(h||'').trim().toLowerCase().replace(/\s*house$/,''); for(var i=0;i<HOMES.length;i++) if(HOMES[i].toLowerCase()===h) return HOMES[i]; return null; }
 
 // ---- Which home? ----------------------------------------------------------
@@ -67,9 +76,20 @@ function render(){
   var vs = DATA.vehicles.slice().sort(function(a,b){ return String(a.reg).localeCompare(String(b.reg)); });
   if (!vs.length){ el('cars').innerHTML = '<div class="loading">No cars are set up for '+esc(HOME)+'. Tell the office.</div>'; return; }
   el('cars').innerHTML = vs.map(function(v,i){
-    return '<button class="car" data-i="'+i+'"><span class="plate">'+esc(v.reg)+'</span><span class="desc"><b>'+colourDot(v.colour)+esc(v.colour||'')+'</b>'+esc([v.make,v.model].filter(Boolean).join(' '))+'</span></button>';
+    var desc = '<span class="desc"><b>'+colourDot(v.colour)+esc(v.colour||'')+'</b>'+esc([v.make,v.model].filter(Boolean).join(' '));
+    if (v.out){
+      var who = v.out.unlogged ? 'Left without being signed out' : 'Out with ' + esc(v.out.driver);
+      return '<div class="car isout" data-i="'+i+'"><span class="plate">'+esc(v.reg)+'</span>'+desc+'<br><span class="badge gone">'+who+' since '+esc(shortTime(v.out.since))+'</span></span>'
+        + '<button class="backbtn" data-back="'+i+'">I\'m back &ndash; car is home</button></div>';
+    }
+    return '<button class="car" data-i="'+i+'"><span class="plate">'+esc(v.reg)+'</span>'+desc+trackerBadge(v.tracker)+'</span></button>';
   }).join('');
-  el('cars').onclick = function(e){ var b=e.target.closest('.car'); if(!b) return; pickCar(vs[+b.getAttribute('data-i')]); };
+  el('cars').onclick = function(e){
+    var bb = e.target.closest('[data-back]');
+    if (bb){ imBack(vs[+bb.getAttribute('data-back')], bb); return; }
+    var b = e.target.closest('.car'); if(!b || b.classList.contains('isout')) return;
+    pickCar(vs[+b.getAttribute('data-i')]);
+  };
 
   var staff = (DATA.staff||[]).slice().sort();
   el('driver').innerHTML = '<option value="">Pick your name&hellip;</option>' + staff.map(function(n){ return '<option>'+esc(n)+'</option>'; }).join('') + '<option value="'+OTHER+'">Other (not listed)</option>';
@@ -83,10 +103,33 @@ function pickCar(v){
   el('picked').innerHTML = '<span class="plate">'+esc(v.reg)+'</span><span class="desc">'+colourDot(v.colour)+esc([v.colour,v.make,v.model].filter(Boolean).join(' '))+'</span>';
   el('driver').value=''; el('yp').value=''; el('driverOther').value=''; el('otherWrap').style.display='none';
   el('driverErr').style.display='none'; el('ypErr').style.display='none';
+  setAway(v.tracker);
   el('submit').disabled = false;
   showQ();
   show('s2');
 }
+// Tracker says the car is not at home: ask the driver to confirm it is really here.
+var needHere = false;
+function setAway(t){
+  t = t || {};
+  needHere = (t.status === 'away' || t.status === 'moving');
+  el('hereChk').checked = false; el('hereErr').style.display = 'none';
+  el('awayBox').style.display = needHere ? 'block' : 'none';
+  if (needHere) el('awayText').textContent = 'The tracker shows this car ' + (t.status === 'moving' ? 'is on the move' : 'is not at home' + (t.miles != null ? ' (about ' + t.miles + ' miles away)' : '')) + '. Only carry on if the car is here with you. The office will be told.';
+}
+el('hereChk').onchange = function(){ el('hereErr').style.display = 'none'; };
+
+// "I'm back" on a car that is out
+function imBack(v, btn){
+  if (!v || !v.out) return;
+  if (!window.confirm('Mark ' + v.reg + ' as back at home now?')) return;
+  btn.disabled = true; btn.textContent = 'Saving…';
+  fetch(CHECKIN_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id: v.out.id, home: HOME, method: 'button' }) })
+    .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ if (!r.ok || !j.ok) throw new Error('no'); return j; }); })
+    .then(function(){ note('ok', v.reg + ' is checked back in. Thank you.'); load(); })
+    .catch(function(){ btn.disabled = false; btn.textContent = 'I\'m back – car is home'; note('bad', 'Could not save that – check the signal and try again. If you forget, it is marked back automatically once the tracker sees the car at home.'); });
+}
+function note(kind, text){ var b = el('queueNote'); b.className = 'notice ' + kind; b.textContent = text; b.style.display = 'block'; window.scrollTo(0,0); clearTimeout(note.t); note.t = setTimeout(showQ, 8000); }
 el('back').onclick = function(){ car=null; show('s1'); };
 el('driver').onchange = function(){ var o=this.value===OTHER; el('otherWrap').style.display=o?'block':'none'; if(o) el('driverOther').focus(); el('driverErr').style.display='none'; };
 el('yp').onchange = function(){ el('ypErr').style.display='none'; };
@@ -97,6 +140,7 @@ el('submit').onclick = function(){
   var yp = el('yp').value, ok = true;
   if (!driver || (other && driver.length < 3)){ el('driverErr').style.display='block'; ok=false; }
   if (!yp){ el('ypErr').style.display='block'; ok=false; }
+  if (needHere && !el('hereChk').checked){ el('hereErr').style.display='block'; ok=false; }
   if (!ok || !car) return;
   this.disabled = true;
   var rec = {
@@ -109,19 +153,27 @@ el('submit').onclick = function(){
     yp: yp === NO_YP ? '' : yp,
     no_yp_errand: yp === NO_YP,
     signed_out_at: new Date().toISOString(),
+    override: needHere && el('hereChk').checked,
     app_version: VERSION
   };
   send(rec).then(function(){ done(rec, true); }).catch(function(e){
-    if (e && e.rejected){ rejected(rec, e.errors); return; }
+    if (e && e.rejected){ rejected(rec, e.errors, e.detail); return; }
     queue(rec); done(rec, false);
   });
 };
-function rejected(rec, errs){
+function rejected(rec, errs, detail){
+  errs = errs || []; detail = detail || {};
   el('submit').disabled = false;
-  var b = el('queueNote'); b.className = 'notice bad'; b.style.display = 'block';
-  b.textContent = 'Not saved: ' + ((errs||[]).join(', ') || 'please check and try again') + '. If this car is wrong for this home, tell the office.';
-  window.scrollTo(0,0);
-  load();
+  if (errs.indexOf('tracker_away') >= 0){
+    // The tracker changed since the list loaded: ask the driver to confirm.
+    setAway(detail.tracker); el('hereErr').style.display = 'block'; window.scrollTo(0,0); return;
+  }
+  var msg;
+  if (errs.indexOf('already_out') >= 0) msg = rec.registration + ' is already signed out' + (detail.driver && !detail.unlogged ? ' by ' + detail.driver : '') + (detail.since ? ' since ' + shortTime(detail.since) : '') + '. It must be checked back in first. Please pick another car.';
+  else if (errs.indexOf('car not at this home') >= 0) msg = rec.registration + ' is no longer listed for ' + HOME + '. Please tell the office.';
+  else msg = 'Not saved: ' + (errs.join(', ') || 'please check and try again') + '.';
+  note('bad', msg);
+  show('s1'); load();
 }
 
 // ---- Sending + offline queue ----------------------------------------------
@@ -130,7 +182,7 @@ function send(rec){
     .then(function(r){
       if (r.ok) return r;
       // 422 = server checked it and said no (e.g. car moved to another home). Retrying will not help.
-      if (r.status === 422) return r.json().catch(function(){ return {}; }).then(function(j){ var e = new Error('rejected'); e.rejected = true; e.errors = j.errors; throw e; });
+      if (r.status === 422) return r.json().catch(function(){ return {}; }).then(function(j){ var e = new Error('rejected'); e.rejected = true; e.errors = j.errors; e.detail = j.detail; throw e; });
       throw new Error(r.status);
     });
 }
@@ -153,6 +205,9 @@ function flushQueue(){
 }
 window.addEventListener('online', flushQueue);
 setInterval(flushQueue, 60000);
+// Keep the In/Out list fresh while the phone sits on the car screen.
+setInterval(function(){ if (HOME && el('s1').classList.contains('on') && document.visibilityState === 'visible') load(); }, 60000);
+document.addEventListener('visibilitychange', function(){ if (HOME && document.visibilityState === 'visible' && el('s1').classList.contains('on')) load(); });
 
 // ---- Screen 3 -------------------------------------------------------------
 var doneTimer = null;

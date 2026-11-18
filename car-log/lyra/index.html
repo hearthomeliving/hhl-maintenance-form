@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="../icon-192.png">
 <link rel="icon" href="../icon-192.png">
-<link rel="stylesheet" href="../app.css?v=mwdui9yd">
+<link rel="stylesheet" href="../app.css?v=mwme2gpt">
 <title>Lyra Car Log</title>
 </head>
 <body>
@@ -35,6 +35,12 @@
   <section class="screen" id="s2">
     <div class="picked" id="picked"></div>
     <button class="link" id="back">&larr; Wrong car? Go back</button>
+
+    <div class="awaybox" id="awayBox">
+      <p id="awayText"></p>
+      <label class="check"><input type="checkbox" id="hereChk"> Yes, the car is here with me</label>
+      <div class="err" id="hereErr">Please tick to confirm the car is here, or pick another car.</div>
+    </div>
 
     <label for="driver">Who is driving?</label>
     <select id="driver"></select>
@@ -61,6 +67,6 @@
 <footer id="foot"></footer>
 
 <script>window.CARLOG_BASE = '../'; window.CARLOG_HOME = 'Lyra';</script>
-<script src="../app.js?v=mwdui9yd"></script>
+<script src="../app.js?v=mwme2gpt"></script>
 </body>
 </html>
