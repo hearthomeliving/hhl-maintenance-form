@@ -35,7 +35,7 @@
   .rbtn.spin .ic{animation:sp 1s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
   .errbar{display:none;margin:16px 0 0;background:rgba(251,113,133,.09);border:1px solid rgba(251,113,133,.3);border-radius:11px;padding:10px 14px;font-size:.86rem;color:#ffd7dd}
-  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:20px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
   .kpi{background:var(--panel);border:1px solid var(--border);border-radius:15px;padding:15px 16px;position:relative;overflow:hidden}
   .kpi::after{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--accent);opacity:.9}
   .kpi.crit::after{background:var(--crit)} .kpi.warn::after{background:var(--warn)} .kpi.ok::after{background:var(--ok)}
@@ -104,7 +104,7 @@
   <div class="errbar" id="errbar"></div>
   <div id="body"><div class="loading">Loading the latest figures…</div></div>
   <div class="foot">
-    Live snapshot, refreshes on its own every few minutes. Compliance and faults from the Property Certificates workspace, fleet from the vehicle register, routine and repairs from the maintenance board, all in ClickUp.
+    Live snapshot, refreshes on its own every few minutes. Compliance from the Property Certificates workspace, fleet from the vehicle register, repairs from the maintenance board, all in ClickUp.
     <br>Certificates flagged <b>due soon</b> within 60 days; fleet within 30 days. This page shows oversight figures only; open each item in ClickUp to act on it.
   </div>
 </div>
@@ -163,7 +163,7 @@ function build(){
   (maint.routine||[]).forEach(function(r){var o=hm(r.home);if(r.state==="overdue")o.rOverdue++;else if(r.state==="missing-report")o.rMissing++;});
   (fleet.vehicles||[]).forEach(function(v){var c=v.compliance||{};var o=hm(c.home);o.vN++;var url=c.registerTaskId?("https://app.clickup.com/t/"+c.registerTaskId):"";var nm=(c.make?(c.make+" "+(c.model||"")).trim():"");var reg=c.reg||v.Registration||"";function ck(d,lab){var t=ms(d);if(!t)return;if(t<now){o.vOver++;o.vItems.push({reg:reg,name:nm,what:lab,due:t,over:true,url:url});}else if(t<=now+SOON_FLEET){o.vSoon++;o.vItems.push({reg:reg,name:nm,what:lab,due:t,over:false,url:url});}}ck(c.motExpiry,"MOT");ck(c.taxDueDate,"Road tax");ck(c.nextServiceDue,"Service");});
   var homes=order.map(function(k){return H[k];});
-  homes.sort(function(a,b){var sa=a.cOver*3+a.vOver*3+a.fHigh*2+a.cSoon+a.fOver+a.rOverdue,sb=b.cOver*3+b.vOver*3+b.fHigh*2+b.cSoon+b.fOver+b.rOverdue;return sb!==sa?sb-sa:(a.home<b.home?-1:1);});
+  homes.sort(function(a,b){var sa=a.cOver*3+a.vOver*3+a.cSoon+a.vSoon,sb=b.cOver*3+b.vOver*3+b.cSoon+b.vSoon;return sb!==sa?sb-sa:(a.home<b.home?-1:1);});
   homes=homes.filter(function(o){return !EXCLUDE_HOMES[o.home];});
   return {now:now,homes:homes,cert:cert,fleet:fleet,maint:maint};
 }
@@ -191,21 +191,16 @@ function render(){
   h+="<div class='kpis'>";
   h+=kpi(homes.length,"Homes covered","",homes.length?"ok":"");
   h+=kpi(t.cOver||t.cSoon||0,(t.cOver?"Certificates overdue":"Certificates due soon"),(t.cOver&&t.cSoon?t.cSoon+" more due soon":"within 60 days"),(t.cOver?"crit":(t.cSoon?"warn":"ok")));
-  h+=kpi(t.fHigh,"High-priority faults",t.fOpen+" open in total",(t.fHigh?"crit":"ok"));
-  h+=kpi(t.rOver,"Routine tasks overdue",(t.rMiss?t.rMiss+" missing a report":"recurring checks"),(t.rOver?"warn":"ok"));
   h+=kpi(t.vOver||t.vSoon||0,(t.vOver?"Vehicles overdue":"Vehicles due soon"),"MOT, tax or service",(t.vOver?"crit":(t.vSoon?"warn":"ok")));
   h+=kpi(repairsOpen,"Open repairs",(repairsOpen?"on the board":"board is clear"),(repairsOpen?"warn":"ok"));
   h+="</div>";
   // glance
-  h+="<div class='sec'><div class='sec-h'><span class='bar'></span><span>All homes at a glance</span></div><div class='card'><table><thead><tr><th>Home</th><th>Certificates</th><th>Faults</th><th>Routine checks</th><th>Fleet</th></tr></thead><tbody>";
-  if(!homes.length)h+="<tr><td colspan='5' class='z'>No data available.</td></tr>";
+  h+="<div class='sec'><div class='sec-h'><span class='bar'></span><span>All homes at a glance</span></div><div class='card'><table><thead><tr><th>Home</th><th>Certificates</th><th>Fleet</th></tr></thead><tbody>";
+  if(!homes.length)h+="<tr><td colspan='3' class='z'>No data available.</td></tr>";
   homes.forEach(function(o){
     var cC=o.cOver?chip(o.cOver,"c-crit")+(o.cSoon?chip(o.cSoon,"c-warn"):""):(o.cSoon?chip(o.cSoon,"c-warn"):(o.cUnknown?chip(o.cUnknown,"c-mut"):(o.cN?chip("&#10003;","c-ok"):"<span class='z'>&mdash;</span>")));
-    var fC=o.fHigh?chip(o.fHigh+" high","c-crit"):(o.fOpen?chip(o.fOpen,"c-mut"):chip("&#10003;","c-ok"));
-    if(o.fOver&&!o.fHigh)fC=chip(o.fOver+" overdue","c-crit");
-    var rC=o.rOverdue?chip(o.rOverdue,"c-warn")+(o.rMissing?chip(o.rMissing,"c-mut"):""):(o.rMissing?chip(o.rMissing,"c-mut"):"<span class='z'>&mdash;</span>");
     var vC=!o.vN?"<span class='z'>&mdash;</span>":(o.vOver?chip(o.vOver,"c-crit")+(o.vSoon?chip(o.vSoon,"c-warn"):""):(o.vSoon?chip(o.vSoon,"c-warn"):chip("&#10003;","c-ok")));
-    h+="<tr><td>"+esc(o.home)+"</td><td>"+cC+"</td><td>"+fC+"</td><td>"+rC+"</td><td>"+vC+"</td></tr>";
+    h+="<tr><td>"+esc(o.home)+"</td><td>"+cC+"</td><td>"+vC+"</td></tr>";
   });
   h+="</tbody></table></div></div>";
   // two-column detail: certificates + fleet
