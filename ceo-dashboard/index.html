@@ -150,6 +150,14 @@ function loadAll(force){
   return fetchFresh();
 }
 
+function repVal(v){if(v==null)return 0;if(typeof v==="object")return +(v.open!=null?v.open:v.count)||0;var n=+v;return isNaN(n)?0:n;}
+function repFor(maint,home){
+  var bh=(maint&&maint.nr&&maint.nr.byHome)||{};
+  if(Object.prototype.hasOwnProperty.call(bh,home))return repVal(bh[home]);
+  var base=String(home||"").replace(/\s+house$/i,"").trim().toLowerCase();
+  for(var k in bh){if(!Object.prototype.hasOwnProperty.call(bh,k))continue;if(String(k).replace(/\s+house$/i,"").trim().toLowerCase()===base)return repVal(bh[k]);}
+  return 0;
+}
 function build(){
   var now=Date.now();
   var cert=ST.cert||{certificates:[],faults:[],homes:[],reports:[]};
@@ -163,7 +171,8 @@ function build(){
   (maint.routine||[]).forEach(function(r){var o=hm(r.home);if(r.state==="overdue")o.rOverdue++;else if(r.state==="missing-report")o.rMissing++;});
   (fleet.vehicles||[]).forEach(function(v){var c=v.compliance||{};var o=hm(c.home);o.vN++;var url=c.registerTaskId?("https://app.clickup.com/t/"+c.registerTaskId):"";var nm=(c.make?(c.make+" "+(c.model||"")).trim():"");var reg=c.reg||v.Registration||"";function ck(d,lab){var t=ms(d);if(!t)return;if(t<now){o.vOver++;o.vItems.push({reg:reg,name:nm,what:lab,due:t,over:true,url:url});}else if(t<=now+SOON_FLEET){o.vSoon++;o.vItems.push({reg:reg,name:nm,what:lab,due:t,over:false,url:url});}}ck(c.motExpiry,"MOT");ck(c.taxDueDate,"Road tax");ck(c.nextServiceDue,"Service");});
   var homes=order.map(function(k){return H[k];});
-  homes.sort(function(a,b){var sa=a.cOver*3+a.vOver*3+a.cSoon+a.vSoon,sb=b.cOver*3+b.vOver*3+b.cSoon+b.vSoon;return sb!==sa?sb-sa:(a.home<b.home?-1:1);});
+  homes.forEach(function(o){o.rep=repFor(maint,o.home);});
+  homes.sort(function(a,b){var sa=a.cOver*3+a.vOver*3+a.rep*2+a.cSoon+a.vSoon,sb=b.cOver*3+b.vOver*3+b.rep*2+b.cSoon+b.vSoon;return sb!==sa?sb-sa:(a.home<b.home?-1:1);});
   homes=homes.filter(function(o){return !EXCLUDE_HOMES[o.home];});
   return {now:now,homes:homes,cert:cert,fleet:fleet,maint:maint};
 }
@@ -195,12 +204,13 @@ function render(){
   h+=kpi(repairsOpen,"Open repairs",(repairsOpen?"on the board":"board is clear"),(repairsOpen?"warn":"ok"));
   h+="</div>";
   // glance
-  h+="<div class='sec'><div class='sec-h'><span class='bar'></span><span>All homes at a glance</span></div><div class='card'><table><thead><tr><th>Home</th><th>Certificates</th><th>Fleet</th></tr></thead><tbody>";
-  if(!homes.length)h+="<tr><td colspan='3' class='z'>No data available.</td></tr>";
+  h+="<div class='sec'><div class='sec-h'><span class='bar'></span><span>All homes at a glance</span></div><div class='card'><table><thead><tr><th>Home</th><th>Certificates</th><th>Open repairs</th><th>Fleet</th></tr></thead><tbody>";
+  if(!homes.length)h+="<tr><td colspan='4' class='z'>No data available.</td></tr>";
   homes.forEach(function(o){
     var cC=o.cOver?chip(o.cOver,"c-crit")+(o.cSoon?chip(o.cSoon,"c-warn"):""):(o.cSoon?chip(o.cSoon,"c-warn"):(o.cUnknown?chip(o.cUnknown,"c-mut"):(o.cN?chip("&#10003;","c-ok"):"<span class='z'>&mdash;</span>")));
+    var pC=o.rep>0?chip(o.rep,"c-warn"):chip("&#10003;","c-ok");
     var vC=!o.vN?"<span class='z'>&mdash;</span>":(o.vOver?chip(o.vOver,"c-crit")+(o.vSoon?chip(o.vSoon,"c-warn"):""):(o.vSoon?chip(o.vSoon,"c-warn"):chip("&#10003;","c-ok")));
-    h+="<tr><td>"+esc(o.home)+"</td><td>"+cC+"</td><td>"+vC+"</td></tr>";
+    h+="<tr><td>"+esc(o.home)+"</td><td>"+cC+"</td><td>"+pC+"</td><td>"+vC+"</td></tr>";
   });
   h+="</tbody></table></div></div>";
   // two-column detail: certificates + fleet
