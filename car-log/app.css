@@ -65,3 +65,11 @@ footer { text-align:center; font-size:12px; color:var(--muted); padding:10px 16p
 .awaybox .check { display:flex; align-items:center; gap:10px; margin:10px 0 0; font-weight:700; color:var(--ink); }
 .awaybox input { width:24px; height:24px; }
 .notice.ok { background:#dcfce7; border-color:#86efac; color:#166534; }
+
+/* Using another home's car (v0.4) */
+.othertoggle { display:block; margin:18px auto 0; font-size:16px; }
+.otherbox { display:none; margin-top:10px; padding-top:12px; border-top:2px dashed var(--border); }
+.otherbox.on { display:block; }
+.otherbox .hint { margin:0 0 12px; }
+.ownerTag { display:inline-block; font-size:13px; font-weight:800; color:#fff; background:var(--brand2); padding:2px 8px; border-radius:6px; margin-bottom:4px; }
+.picked .ownerTag { margin:0 0 0 6px; }

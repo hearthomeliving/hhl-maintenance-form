@@ -2,7 +2,7 @@
 // so the Car Log is a separate app from the maintenance form.
 // Network-first: updates show straight away; the saved copy is used only when there is no signal.
 // Webhook calls (n8n) are never cached.
-const CACHE_VERSION = 'hhl-carlog-v3';
+const CACHE_VERSION = 'hhl-carlog-v4';
 const HOMES = ['aurora', 'cygnus', 'leo', 'lynx', 'lyra', 'orion'];
 const SHELL = ['./', './app.js', './app.css', './icon-192.png', './icon-512.png']
   .concat(HOMES.map(function (h) { return './' + h + '/'; }))
