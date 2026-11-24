@@ -1281,6 +1281,11 @@ const state = {
   noticedAt: '',
   photos: [],
   childrenInArea: 'No',
+  reporterPhone: '',
+  tlName: '',
+  tlPhone: '',
+  priority: '',
+  urgentConfirmed: false,
   refNumber: ''
 };
 
@@ -1373,12 +1378,18 @@ function renderStep0() {
   screen.appendChild(field('Your name', textField('name', state.name, 'Sarah K'), null, true));
   screen.appendChild(field('Your role', selectField('role', state.role, ROLES), null, true));
   screen.appendChild(field('Your email address', textField('contactValue', state.contactValue, 'e.g. sarah@hearthomeliving.co.uk'), 'We email a copy of this report, with your photos, to you and the home inbox.', true));
+  screen.appendChild(field('Your phone number', textField('reporterPhone', state.reporterPhone, 'e.g. 07700 900123'), 'So the maintenance team can reach you about this report.', true));
+  screen.appendChild(field('Team leader on shift — name', textField('tlName', state.tlName, 'Name of the TL on shift now'), 'Who is leading the shift right now. This may be you.', true));
+  screen.appendChild(field('Team leader on shift — phone', textField('tlPhone', state.tlPhone, 'e.g. 07700 900123'), 'A number we can reach day or night if this becomes urgent.', true));
 
   screen.appendChild(navButtons({ back: false, onNext: () => {
     if (!state.home) { alert('Please choose which home you are in.'); return; }
     if (!state.name.trim()) { alert('Your name is required.'); return; }
     if (!state.contactValue.trim()) { alert('Your email address is required.'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.contactValue.trim())) { alert('Please enter a valid email address.'); return; }
+    if (!/\d{5}/.test(state.reporterPhone || '')) { alert('Your phone number is required.'); return; }
+    if (!state.tlName.trim()) { alert('The team leader on shift’s name is required.'); return; }
+    if (!/\d{5}/.test(state.tlPhone || '')) { alert('The team leader on shift’s phone number is required.'); return; }
     state.step = 1; render();
   } }));
 }
@@ -1414,8 +1425,10 @@ function autoLogEmergency() {
       name: state.name,
       role: state.role,
       contact_method: state.contactMethod,
-      contact_value: state.contactValue
+      contact_value: state.contactValue,
+      phone: state.reporterPhone
     },
+    team_leader_on_shift: { name: state.tlName, phone: state.tlPhone },
     home: state.home,
     emergency_999_ticked: state.emergencyTicked.filter(function (t) { return EMERGENCY_999.indexOf(t) !== -1; }),
     emergency_oncall_ticked: state.emergencyTicked.filter(function (t) { return ONCALL.indexOf(t) !== -1; })
@@ -2008,6 +2021,88 @@ function refreshPhotoList(container) {
   });
 }
 
+function isManagerRole() {
+  return state.role === 'House Manager' || state.role === 'Deputy Manager';
+}
+
+// Manager-only triage on the review screen. Amber/Green set the priority and submit
+// normally; Red opens the confirmation modal and only arms once all three boxes are ticked,
+// then the report is sent with is_emergency:true so the pipeline routes it as an emergency.
+function renderTriage() {
+  var wrap = el('div', { style: 'margin-top: 16px;' });
+  wrap.appendChild(el('p', { class: 'step-eyebrow' }, 'Priority'));
+  wrap.appendChild(el('h2', { class: 'step-title', style: 'font-size: 18px;' }, 'How urgent is this?'));
+  wrap.appendChild(el('p', { class: 'step-hint' }, 'As a manager, set the priority. Urgent is for a real emergency only, and asks you to confirm you have followed the on-call process.'));
+  var pills = el('div', { class: 'severity-pills' });
+  function pill(key, label, sub, colour) {
+    var on = state.priority === key;
+    return el('button', {
+      type: 'button',
+      style: 'flex:1; min-width:150px; text-align:left; padding:12px 14px; border-radius:12px; border:2px solid ' + (on ? colour : '#d8dee6') + '; background:' + (on ? colour + '1a' : '#fff') + '; cursor:pointer;',
+      onclick: function () {
+        if (key === 'red') { openUrgentModal(); return; }
+        state.priority = key; state.urgentConfirmed = false; render();
+      }
+    }, [
+      el('span', { style: 'display:block; font-weight:700; color:' + colour + ';' }, label),
+      el('span', { style: 'display:block; font-size:12px; color:#5a6472; margin-top:2px;' }, sub)
+    ]);
+  }
+  pills.appendChild(pill('red', '🔴 Urgent', 'Real emergency — needs confirmation', '#c62828'));
+  pills.appendChild(pill('amber', '🟠 Soon', 'Within 2–3 days', '#b45309'));
+  pills.appendChild(pill('green', '🟢 Routine', 'Within 7 days', '#15803d'));
+  wrap.appendChild(pills);
+  if (state.priority === 'red' && state.urgentConfirmed) {
+    wrap.appendChild(el('div', { class: 'warn-banner', style: 'margin-top:10px;' }, 'Marked URGENT — on submit this is raised as an emergency and the on-call team is alerted. You have confirmed on-call was informed.'));
+  }
+  return wrap;
+}
+
+function openUrgentModal() {
+  var overlay = document.getElementById('settings-overlay');
+  overlay.style.display = 'flex';
+  overlay.innerHTML = '';
+  var card = el('div', { style: 'max-width:520px; width:92%; background:#fff; border-radius:16px; padding:22px; max-height:88vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.3);' });
+  card.appendChild(el('h2', { style: 'margin:0 0 6px; color:#c62828;' }, 'Before you mark this urgent'));
+  card.appendChild(el('p', { class: 'step-hint', style: 'margin-top:0;' }, 'Urgent raises this as an emergency. Use it only for a real emergency, after you have followed the on-call process.'));
+  var g = el('div', { style: 'background:#fdecea; border:1px solid #f5c6c0; border-radius:12px; padding:12px 14px; margin:10px 0; font-size:14px; line-height:1.5;' });
+  g.appendChild(el('div', {}, [el('b', {}, 'If anyone is in danger, call 999 now.')]));
+  g.appendChild(el('div', { style: 'margin-top:6px;' }, [el('b', {}, 'Gas emergency: '), el('a', { href: 'tel:08001119999' }, '0800 111 999'), ' — National Gas Emergency. Do not switch anything on, get everyone out.']));
+  g.appendChild(el('div', { style: 'margin-top:6px;' }, 'Then follow the on-call process: inform the on-call manager / responsible individual through the on-call rota before you submit.'));
+  card.appendChild(g);
+  var confs = [
+    'I confirm I have read the above.',
+    'I confirm I have let the responsible individual know through the on-call process.',
+    'I confirm this is a real emergency that follows that procedure.'
+  ];
+  var ticks = [false, false, false];
+  var confirmBtn;
+  var list = el('div', { class: 'check-list' });
+  confs.forEach(function (c, i) {
+    var item = el('div', { class: 'check-item' });
+    var cb = el('input', { type: 'checkbox', id: 'uconf-' + i, onchange: function (e) {
+      ticks[i] = e.target.checked;
+      item.classList.toggle('checked', e.target.checked);
+      var all = ticks[0] && ticks[1] && ticks[2];
+      confirmBtn.disabled = !all;
+      confirmBtn.style.opacity = all ? '1' : '0.5';
+    }});
+    item.appendChild(cb);
+    item.appendChild(el('label', { for: 'uconf-' + i }, c));
+    list.appendChild(item);
+  });
+  card.appendChild(list);
+  var btnRow = el('div', { style: 'display:flex; gap:10px; margin-top:16px;' });
+  btnRow.appendChild(el('button', { class: 'btn-secondary', type: 'button', onclick: function () { closeSettings(); } }, 'Cancel'));
+  confirmBtn = el('button', { type: 'button', style: 'flex:1; background:#c62828; color:#fff; border:none; border-radius:12px; padding:12px; font-weight:700; cursor:pointer; opacity:0.5;', onclick: function () {
+    state.priority = 'red'; state.urgentConfirmed = true; closeSettings(); render();
+  } }, 'Confirm urgent');
+  confirmBtn.disabled = true;
+  btnRow.appendChild(confirmBtn);
+  card.appendChild(btnRow);
+  overlay.appendChild(card);
+}
+
 function renderStep7() {
   // Review screen. Was Step 8 in v0.5. No severity row.
   const screen = document.getElementById('screen');
@@ -2048,14 +2143,23 @@ function renderStep7() {
 
   screen.appendChild(sum);
 
-  screen.appendChild(el('p', { class: 'field-help', style: 'margin-top: 10px;' }, 'The maintenance team will set severity when they triage this. You do not need to.'));
-
-  screen.appendChild(navButtons({ onNext: submit, nextLabel: 'Submit request' }));
+  if (isManagerRole()) {
+    screen.appendChild(renderTriage());
+    screen.appendChild(navButtons({ onNext: function () {
+      if (!state.priority) { alert('Please set how urgent this is before submitting.'); return; }
+      if (state.priority === 'red' && !state.urgentConfirmed) { alert('Please complete the urgent confirmation first.'); return; }
+      submit();
+    }, nextLabel: state.priority === 'red' ? 'Submit URGENT request' : 'Submit request' }));
+  } else {
+    screen.appendChild(el('p', { class: 'field-help', style: 'margin-top: 10px;' }, 'The maintenance team will set severity when they triage this. You do not need to.'));
+    screen.appendChild(navButtons({ onNext: submit, nextLabel: 'Submit request' }));
+  }
 }
 
 function buildPayload() {
   return {
-    is_emergency: false,
+    is_emergency: state.priority === 'red',
+    priority: state.priority || '',
     reference: state.refNumber,
     submitted_at: new Date().toISOString(),
     notify_mark_to: settings.notify_mark_to || DEFAULT_SETTINGS.notify_mark_to,
@@ -2065,8 +2169,11 @@ function buildPayload() {
       name: state.name,
       role: state.role,
       contact_method: state.contactMethod,
-      contact_value: state.contactValue
+      contact_value: state.contactValue,
+      phone: state.reporterPhone
     },
+    team_leader_on_shift: { name: state.tlName, phone: state.tlPhone },
+    urgent_confirmed: state.priority === 'red' ? state.urgentConfirmed : false,
     home: state.home,
     rooms: state.rooms,
     room_other_text: state.roomOther || '',
@@ -2271,6 +2378,8 @@ function resetState() {
   state.noticedAt = '';
   state.photos = [];
   state.childrenInArea = 'No';
+  state.priority = '';
+  state.urgentConfirmed = false;
   state.refNumber = '';
 }
 
