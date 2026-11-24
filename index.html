@@ -2032,7 +2032,7 @@ function renderTriage() {
   var wrap = el('div', { style: 'margin-top: 16px;' });
   wrap.appendChild(el('p', { class: 'step-eyebrow' }, 'Priority'));
   wrap.appendChild(el('h2', { class: 'step-title', style: 'font-size: 18px;' }, 'How urgent is this?'));
-  wrap.appendChild(el('p', { class: 'step-hint' }, 'As a manager, set the priority. Urgent is for a real emergency only, and asks you to confirm you have followed the on-call process.'));
+  wrap.appendChild(el('p', { class: 'step-hint' }, 'Set how urgent this is. Urgent is for a real emergency only, and asks you to confirm you have followed the on-call process.'));
   var pills = el('div', { class: 'severity-pills' });
   function pill(key, label, sub, colour) {
     var on = state.priority === key;
@@ -2143,17 +2143,12 @@ function renderStep7() {
 
   screen.appendChild(sum);
 
-  if (isManagerRole()) {
-    screen.appendChild(renderTriage());
-    screen.appendChild(navButtons({ onNext: function () {
-      if (!state.priority) { alert('Please set how urgent this is before submitting.'); return; }
-      if (state.priority === 'red' && !state.urgentConfirmed) { alert('Please complete the urgent confirmation first.'); return; }
-      submit();
-    }, nextLabel: state.priority === 'red' ? 'Submit URGENT request' : 'Submit request' }));
-  } else {
-    screen.appendChild(el('p', { class: 'field-help', style: 'margin-top: 10px;' }, 'The maintenance team will set severity when they triage this. You do not need to.'));
-    screen.appendChild(navButtons({ onNext: submit, nextLabel: 'Submit request' }));
-  }
+  screen.appendChild(renderTriage());
+  screen.appendChild(navButtons({ onNext: function () {
+    if (!state.priority) { alert('Please set how urgent this is before submitting.'); return; }
+    if (state.priority === 'red' && !state.urgentConfirmed) { alert('Please complete the urgent confirmation first.'); return; }
+    submit();
+  }, nextLabel: state.priority === 'red' ? 'Submit URGENT request' : 'Submit request' }));
 }
 
 function buildPayload() {
