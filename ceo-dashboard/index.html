@@ -35,7 +35,7 @@
   .rbtn.spin .ic{animation:sp 1s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
   .errbar{display:none;margin:16px 0 0;background:rgba(251,113,133,.09);border:1px solid rgba(251,113,133,.3);border-radius:11px;padding:10px 14px;font-size:.86rem;color:#ffd7dd}
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:20px}
   .kpi{background:var(--panel);border:1px solid var(--border);border-radius:15px;padding:15px 16px;position:relative;overflow:hidden}
   .kpi::after{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--accent);opacity:.9}
   .kpi.crit::after{background:var(--crit)} .kpi.warn::after{background:var(--warn)} .kpi.ok::after{background:var(--ok)}
@@ -113,9 +113,10 @@
 var CERT_URL="https://ruthbloch.app.n8n.cloud/webhook/cert-data";
 var FLEET_URL="https://ruthbloch.app.n8n.cloud/webhook/fleet-data";
 var MAINT_URL="https://ruthbloch.app.n8n.cloud/webhook/maint-data";
+var ROUTINE_URL="https://maintenance.hhltraining.co.uk/api/routine-public"; // app-side routine schedule summary (CORS open)
 var DAY=864e5, SOON_CERT=60*DAY, SOON_FLEET=30*DAY;
 var EXCLUDE_HOMES={"Andy":1}; // fleet rows that aren't actual homes (a named person's van); add names here to hide them
-var ST={cert:null,fleet:null,maint:null,err:[]};
+var ST={cert:null,fleet:null,maint:null,routine:null,err:[]};
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 function fmt(ms){if(!ms)return "";var d=new Date(ms);return isNaN(d)?"":d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});}
@@ -125,14 +126,15 @@ function clk(url){return url?(" href='"+esc(url)+"' target='_blank' rel='noopene
 async function jget(u){var r=await fetch(u+(u.indexOf("?")>-1?"&":"?")+"t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);var d=await r.json();return Array.isArray(d)?d[0]:d;}
 
 var CACHE_KEY="ceoDashData_v1", DAY_MS=24*60*60*1000;
-function saveCache(){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify({at:Date.now(),cert:ST.cert,fleet:ST.fleet,maint:ST.maint})); }catch(e){} }
+function saveCache(){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify({at:Date.now(),cert:ST.cert,fleet:ST.fleet,maint:ST.maint,routine:ST.routine})); }catch(e){} }
 function loadCache(){ try{ var s=localStorage.getItem(CACHE_KEY); if(!s)return null; var d=JSON.parse(s); return (d&&typeof d.at==="number")?d:null; }catch(e){ return null; } }
 async function fetchFresh(){
   var btn=document.getElementById("refresh");if(btn)btn.classList.add("spin");
-  var res=await Promise.allSettled([jget(CERT_URL),jget(FLEET_URL),jget(MAINT_URL)]);
+  var res=await Promise.allSettled([jget(CERT_URL),jget(FLEET_URL),jget(MAINT_URL),jget(ROUTINE_URL)]);
   ST.cert=res[0].status==="fulfilled"?res[0].value:null;
   ST.fleet=res[1].status==="fulfilled"?res[1].value:null;
   ST.maint=res[2].status==="fulfilled"?res[2].value:null;
+  ST.routine=res[3].status==="fulfilled"?res[3].value:null;
   ST.err=[];
   if(!ST.cert)ST.err.push("certificates");
   if(!ST.fleet)ST.err.push("fleet");
@@ -146,7 +148,7 @@ async function fetchFresh(){
 function loadAll(force){
   if(force===true)return fetchFresh();
   var c=loadCache();
-  if(c && (Date.now()-c.at)<DAY_MS){ ST.cert=c.cert;ST.fleet=c.fleet;ST.maint=c.maint;ST.err=[]; try{render();}catch(e){} return; }
+  if(c && (Date.now()-c.at)<DAY_MS){ ST.cert=c.cert;ST.fleet=c.fleet;ST.maint=c.maint;ST.routine=c.routine;ST.err=[]; try{render();}catch(e){} return; }
   return fetchFresh();
 }
 
@@ -170,11 +172,13 @@ function build(){
   (cert.faults||[]).filter(function(f){return !f.closed;}).forEach(function(f){var o=hm(f.home);o.fOpen++;var sev=(f.severity||"").toLowerCase();if(sev==="high")o.fHigh++;else if(sev==="low")o.fLow++;else o.fNormal++;var over=f.due&&f.due<now;if(over)o.fOver++;if(sev==="high"||over)o.fItems.push({title:f.title,sev:sev,due:f.due,over:over,url:f.url});});
   (maint.routine||[]).forEach(function(r){var o=hm(r.home);if(r.state==="overdue")o.rOverdue++;else if(r.state==="missing-report")o.rMissing++;});
   (fleet.vehicles||[]).forEach(function(v){var c=v.compliance||{};var o=hm(c.home);o.vN++;var url=c.registerTaskId?("https://app.clickup.com/t/"+c.registerTaskId):"";var nm=(c.make?(c.make+" "+(c.model||"")).trim():"");var reg=c.reg||v.Registration||"";function ck(d,lab){var t=ms(d);if(!t)return;if(t<now){o.vOver++;o.vItems.push({reg:reg,name:nm,what:lab,due:t,over:true,url:url});}else if(t<=now+SOON_FLEET){o.vSoon++;o.vItems.push({reg:reg,name:nm,what:lab,due:t,over:false,url:url});}}ck(c.motExpiry,"MOT");ck(c.taxDueDate,"Road tax");ck(c.nextServiceDue,"Service");});
+  var routine=ST.routine||{homes:[],totals:{overdue:0,soon:0,booked:0,done:0}};
+  var rByHome={};(routine.homes||[]).forEach(function(r){rByHome[String(r.home||"").trim().toLowerCase().replace(/\s+house$/,"")]=r;});
   var homes=order.map(function(k){return H[k];});
-  homes.forEach(function(o){o.rep=repFor(maint,o.home);});
+  homes.forEach(function(o){o.rep=repFor(maint,o.home);o.appRoutine=rByHome[String(o.home||"").trim().toLowerCase().replace(/\s+house$/,"")]||null;});
   homes.sort(function(a,b){var sa=a.cOver*3+a.vOver*3+a.rep*2+a.cSoon+a.vSoon,sb=b.cOver*3+b.vOver*3+b.rep*2+b.cSoon+b.vSoon;return sb!==sa?sb-sa:(a.home<b.home?-1:1);});
   homes=homes.filter(function(o){return !EXCLUDE_HOMES[o.home];});
-  return {now:now,homes:homes,cert:cert,fleet:fleet,maint:maint};
+  return {now:now,homes:homes,cert:cert,fleet:fleet,maint:maint,routine:routine};
 }
 
 function chip(n,cls){return "<span class='chip "+cls+"'>"+n+"</span>";}
@@ -183,7 +187,7 @@ function kpi(n,l,s,cls){return "<div class='kpi "+(cls||"")+"'><div class='n'>"+
 function render(){
   var R=build(),homes=R.homes;
   // stamp
-  var gen=Math.max(R.cert&&R.cert.generated||0, R.maint&&R.maint.generated||0, R.fleet&&R.fleet.generatedAt?Date.parse(R.fleet.generatedAt):0);
+  var gen=Math.max(R.cert&&R.cert.generated||0, R.maint&&R.maint.generated||0, R.routine&&R.routine.generated||0, R.fleet&&R.fleet.generatedAt?Date.parse(R.fleet.generatedAt):0);
   var dot=document.getElementById("dot"), stamp=document.getElementById("stamp");
   stamp.textContent="Updated "+(gen?new Date(gen).toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}));
   dot.className="dot"+(ST.err.length?" err":"");
@@ -195,6 +199,7 @@ function render(){
   var counts=(R.maint&&R.maint.counts)||{};
   var repairsOpen=(R.maint&&R.maint.nr&&R.maint.nr.open)||counts.nonRoutine||0;
   var cc=(R.maint&&R.maint.contractorCompliance)||{};
+  var rt=(R.routine&&R.routine.totals)||{overdue:0,soon:0,booked:0};
   var h="";
   // KPI band
   h+="<div class='kpis'>";
@@ -202,15 +207,17 @@ function render(){
   h+=kpi(t.cOver||t.cSoon||0,(t.cOver?"Certificates overdue":"Certificates due soon"),(t.cOver&&t.cSoon?t.cSoon+" more due soon":"within 60 days"),(t.cOver?"crit":(t.cSoon?"warn":"ok")));
   h+=kpi(t.vOver||t.vSoon||0,(t.vOver?"Vehicles overdue":"Vehicles due soon"),"MOT, tax or service",(t.vOver?"crit":(t.vSoon?"warn":"ok")));
   h+=kpi(repairsOpen,"Open repairs",(repairsOpen?"on the board":"board is clear"),(repairsOpen?"warn":"ok"));
+  h+=kpi((rt.overdue||rt.soon||0),(rt.overdue?"Routine overdue":"Routine due soon"),(rt.booked?rt.booked+" booked in":"compulsory schedule"),(rt.overdue?"crit":(rt.soon?"warn":"ok")));
   h+="</div>";
   // glance
-  h+="<div class='sec'><div class='sec-h'><span class='bar'></span><span>All homes at a glance</span></div><div class='card'><table><thead><tr><th>Home</th><th>Certificates</th><th>Open repairs</th><th>Fleet</th></tr></thead><tbody>";
-  if(!homes.length)h+="<tr><td colspan='4' class='z'>No data available.</td></tr>";
+  h+="<div class='sec'><div class='sec-h'><span class='bar'></span><span>All homes at a glance</span></div><div class='card'><table><thead><tr><th>Home</th><th>Certificates</th><th>Open repairs</th><th>Fleet</th><th>Routine</th></tr></thead><tbody>";
+  if(!homes.length)h+="<tr><td colspan='5' class='z'>No data available.</td></tr>";
   homes.forEach(function(o){
     var cC=o.cOver?chip(o.cOver,"c-crit")+(o.cSoon?chip(o.cSoon,"c-warn"):""):(o.cSoon?chip(o.cSoon,"c-warn"):(o.cUnknown?chip(o.cUnknown,"c-mut"):(o.cN?chip("&#10003;","c-ok"):"<span class='z'>&mdash;</span>")));
     var pC=o.rep>0?chip(o.rep,"c-warn"):chip("&#10003;","c-ok");
     var vC=!o.vN?"<span class='z'>&mdash;</span>":(o.vOver?chip(o.vOver,"c-crit")+(o.vSoon?chip(o.vSoon,"c-warn"):""):(o.vSoon?chip(o.vSoon,"c-warn"):chip("&#10003;","c-ok")));
-    h+="<tr><td>"+esc(o.home)+"</td><td>"+cC+"</td><td>"+pC+"</td><td>"+vC+"</td></tr>";
+    var ar=o.appRoutine;var rC=!ar?"<span class='z'>&mdash;</span>":(ar.overdue?chip(ar.overdue,"c-crit")+(ar.soon?chip(ar.soon,"c-warn"):""):(ar.soon?chip(ar.soon,"c-warn"):chip("&#10003;","c-ok")));
+    h+="<tr><td>"+esc(o.home)+"</td><td>"+cC+"</td><td>"+pC+"</td><td>"+vC+"</td><td>"+rC+"</td></tr>";
   });
   h+="</tbody></table></div></div>";
   // two-column detail: certificates + fleet
